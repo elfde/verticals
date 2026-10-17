@@ -29,11 +29,8 @@ import asyncio
 import json
 import math
 import os
-import queue
 import re
-import selectors
 import shutil
-import signal
 import socket
 import subprocess
 import threading
@@ -44,6 +41,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from verticals import host
 from verticals.core.source_checks import Check, reading_servers
 from verticals.core.sources import Result, one_line
 
@@ -59,11 +57,7 @@ FILE_TAIL = 8192
 # given, because an app opened from the Dock has a short PATH. The same three here, so `claude` is found the same way.
 EXTRA_PATH = (".local/bin", "/opt/homebrew/bin", "/usr/local/bin")
 # What a command is given from the app's environment. Nothing else: the app's own token and database address stay out.
-KEEP_ENV = ("HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR")
-WINDOWS = os.name == "nt"
-if WINDOWS:  # without these a program on Windows cannot find its system DLLs, its profile, or a temp folder
-    KEEP_ENV += ("SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "USERNAME", "APPDATA", "LOCALAPPDATA",
-                 "PROGRAMDATA", "PROGRAMFILES", "TEMP", "TMP")
+KEEP_ENV = ("HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR", *host.KEEP_ENV)
 # What `claude` is also given, to keep the owner's sign-in (the same list as `chat.py::ENV_KEEP`).
 CLAUDE_ENV = ("CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
               "CLAUDE_CODE_USE_FOUNDRY")
@@ -163,13 +157,7 @@ def _end(proc: subprocess.Popen) -> None:
     with _LIVE_LOCK:
         _LIVE.pop(proc.pid, None)
     if proc.returncode is None:
-        if WINDOWS:  # no process groups to signal: end the tree by its root
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
-        else:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
+        host.kill_tree(proc)
     if proc.stdout is not None:
         try:
             proc.stdout.close()
@@ -188,46 +176,6 @@ def kill_live() -> int:
     return len(running)
 
 
-# A process group of its own, so `_end` takes everything the command started with it.
-_GROUP: dict[str, Any] = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if WINDOWS else {"start_new_session": True}
-
-
-class _Output:
-    """A command's output, read in chunks with a timeout: `read` answers None when nothing came in time, b"" at the end.
-    POSIX selects on the pipe; Windows cannot select on a pipe, so there a daemon thread reads it into a queue."""
-
-    def __init__(self, stream: Any) -> None:
-        self.stream = stream
-        if WINDOWS:
-            self.chunks: queue.SimpleQueue[bytes] = queue.SimpleQueue()
-            threading.Thread(target=self._pump, daemon=True).start()
-        else:
-            self.selector = selectors.DefaultSelector()
-            self.selector.register(stream, selectors.EVENT_READ)
-
-    def _pump(self) -> None:
-        try:
-            while data := os.read(self.stream.fileno(), 65536):
-                self.chunks.put(data)
-        except (OSError, ValueError):  # closed under it by `_end`
-            pass
-        self.chunks.put(b"")
-
-    def read(self, timeout: float) -> bytes | None:
-        if WINDOWS:
-            try:
-                return self.chunks.get(timeout=timeout)
-            except queue.Empty:
-                return None
-        if not self.selector.select(timeout):
-            return None
-        return os.read(self.stream.fileno(), 65536)
-
-    def close(self) -> None:
-        if not WINDOWS:
-            self.selector.close()
-
-
 def run_argv(
     argv: Sequence[str], *, env: Mapping[str, str], cwd: Path, seconds: float, stop: threading.Event,
 ) -> tuple[int | None, str, str | None]:
@@ -239,7 +187,7 @@ def run_argv(
     try:
         proc = subprocess.Popen(
             list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
-            env=dict(env), **_GROUP,
+            env=dict(env), **host.NEW_GROUP,  # a group of its own, so `_end` takes everything it started
         )
     except FileNotFoundError:
         return None, "", f"command not found: {argv[0]}"
@@ -253,7 +201,7 @@ def run_argv(
     deadline = time.monotonic() + seconds
     chunks: list[bytes] = []
     size = 0
-    output = _Output(proc.stdout)
+    output = host.OutputReader(proc.stdout)
     try:
         while True:
             if stop.is_set() or proc.returncode is not None:  # told to stop, or ended under us by `kill_live`

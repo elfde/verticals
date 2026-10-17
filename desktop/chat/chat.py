@@ -35,9 +35,13 @@ HERE = Path(__file__).resolve().parent
 # tests do).
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
+# What differs between operating systems is in verticals/host, two folders up here as in the app's bundle.
+if str(HERE.parents[1]) not in sys.path:
+    sys.path.insert(0, str(HERE.parents[1]))
 import agent_sessions  # noqa: E402  (where a session lives, when it moved, how it opens: docs/design/task-sessions.md)
 import agent_signin  # noqa: E402  (a signed-out agent signed back in from the field: docs/design/agent-sign-in.md)
 from morning_flow import MorningFlow  # noqa: E402
+from verticals import host  # noqa: E402
 
 SKILL = HERE.parents[1] / ".agents" / "skills" / "verticals-operator"
 MORNING_SKILL = HERE.parents[1] / ".agents" / "skills" / "verticals-morning-report"
@@ -296,9 +300,9 @@ def child_env(extra=None):
 
 
 def system_prompt_args(chat, text):
-    """How Claude is told its prompt. Windows caps a command line at 32,767 characters and the morning report's prompt alone
-    comes near that, so there the prompt goes in a file, one per distinct prompt, named by its content."""
-    if os.name != "nt":
+    """How Claude is told its prompt. Where the system caps a command line (Windows: 32,767 characters) the morning report's
+    prompt alone comes near the cap, so there the prompt goes in a file, one per distinct prompt, named by its content."""
+    if host.COMMAND_LINE_MAX is None:
         return ["--append-system-prompt", text]
     folder = Path(getattr(chat, "state_dir", None) or tempfile.gettempdir()) / "prompts"
     folder.mkdir(exist_ok=True)
