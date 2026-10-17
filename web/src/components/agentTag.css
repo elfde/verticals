@@ -1,6 +1,7 @@
 .agent-tag-wrap { position: relative; }
 .agent-tag { gap: 2px; }
 .agent-tag__mark { width: 16px; height: 16px; filter: brightness(0) invert(1); }
+.agent-picker:focus { outline: none; }
 .agent-picker {
   position: absolute;
   left: 0;

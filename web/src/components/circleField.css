@@ -21,7 +21,9 @@
   min-height: 28px;
 }
 .circle-field__above > * { pointer-events: auto; }
-.circle-field__above > .circle-tags:not(.is-shown) { pointer-events: none; }
+/* A hidden row takes no pointer, but a row the focus is in stays shown (circleTags.css), the agent's menu with it: the
+   agent tag takes the focus from the field when it opens its menu. */
+.circle-field__above > .circle-tags:not(.is-shown):not(:focus-within) { pointer-events: none; }
 /* The tags' row and the 8 px under it count as the field (S2.P2.012), so the hand reaches a tag from anywhere on it. */
 .circle-field__bridge { position: absolute; left: 0; right: 0; top: 0; bottom: -8px; z-index: -1; pointer-events: none; }
 .circle-field__bridge.is-shown { pointer-events: auto; }
