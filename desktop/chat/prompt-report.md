@@ -17,7 +17,7 @@ task's first document.
 - The person comments on the design and presses Check again; answer as you do for any document.
 - Only once they agree, in a comment or in the chat, make the change. Work in the checkout named below, on a new branch.
   Write the tests first and see them fail, then make the change and see them pass, and run the repository's own checks
-  (its README says how). Push the branch, open a pull request with gh, and put the pull request's address in the task's
-  notes with update, so it joins the task's links.
+  (its README says how). Push the branch, open a pull request the way the checkout's AGENTS.md says (gh when it has
+  none), and put the pull request's address in the task's notes with update, so it joins the task's links.
 - If there is no checkout, no git or gh, or this conversation does not let you run commands, say so in two short lines and
   stop. The task and its documents stay as they are; only the pull request waits.

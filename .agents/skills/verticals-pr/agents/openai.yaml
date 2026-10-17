@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vertical PRs"
+  short_description: "Open pull requests that keep the repository's rules"
+  default_prompt: "Use $verticals-pr to open this change as a pull request through tools/pr.py."

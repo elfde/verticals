@@ -61,7 +61,7 @@ def test_the_prompt_says_what_a_report_is_and_how_a_design_and_its_pull_request_
     # The person comments and presses Check again; only once they agree is the change made, with tests first, in a checkout.
     assert "presses Check again" in prompt and "Only once they agree" in prompt
     assert "on a new branch" in prompt and "tests first" in prompt and "see them fail" in prompt
-    assert "open a pull request with gh" in prompt and "so it joins the task's links" in prompt
+    assert "open a pull request the way the checkout's AGENTS.md says" in prompt and "so it joins the task's links" in prompt
     # Without what it needs it says so and stops: the task and its documents stay, only the pull request waits.
     assert "only the pull request waits" in prompt
 

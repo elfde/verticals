@@ -14,7 +14,7 @@ CLAUDE_SKILLS = ROOT / ".claude" / "skills"
 DESIGN_SYSTEM_ARCHIVE = ROOT / "web" / "vendor" / "konstantinopolskii-design-system-2.1.1.tgz"
 EVIDENCE_DOC = ROOT / "docs" / "EVIDENCE.md"
 
-EXPECTED = {"verticals-planning", "verticals-operator", "verticals-morning-report"}
+EXPECTED = {"verticals-planning", "verticals-operator", "verticals-morning-report", "verticals-pr"}
 PRIVATE_RUNTIME_TERMS = {
     "/Users/",
     "DailyRecap",

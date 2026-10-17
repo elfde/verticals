@@ -1,0 +1,23 @@
+name: pr rules
+
+# The form every pull request keeps (.agents/skills/verticals-pr): a `type(scope): what changes` title and the text's
+# sections. tools/pr.py checks the same before a PR opens.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  form:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Title and sections
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: python3 tools/pr_rules.py

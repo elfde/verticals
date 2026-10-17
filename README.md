@@ -58,7 +58,8 @@ that, Claude Code does not see the repository's skills.
 
 ## Collaboration
 
-Submit changes as pull requests against `main`.
+Submit changes as pull requests against `main`, one task each, opened with `tools/pr.py`
+(the `verticals-pr` skill below has the rules; `.github/workflows/pr-rules.yml` checks their form on GitHub).
 Edit web/src for UI, verticals/core for domain behavior, verticals/db/migrations for schema.
 Do not edit generated bundles or vendor archives. Do not commit secrets or real user data.
 
@@ -72,6 +73,9 @@ The portable, repository-owned skill pack lives in `.agents/skills/`:
   and verifies raw and rendered state afterward.
 - `verticals-morning-report` reconciles current work and configured sources into one
   daily review report, then updates that same report after the reader's feedback.
+- `verticals-pr` holds how a pull request here is made and described, learned from the
+  first 64. `tools/pr.py` checks a PR against it and opens it; in Claude Code, the hook in
+  `.claude/settings.json` refuses `gh pr create` itself.
 
 Claude discovers the same sources through relative links in `.claude/skills/`; Codex reads
 `.agents/skills/` directly. The skills contain no personal routes, local paths, account names,
