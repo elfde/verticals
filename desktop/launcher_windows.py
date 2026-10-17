@@ -169,11 +169,33 @@ with psycopg.connect(os.environ['VERTICALS_DATABASE_URL']) as c:
 
 # ---------------------------------------------------------------- services
 
+_console = threading.Lock()
+
+
+def _tee(name, stream, logfile):
+    """Copy a service's output to its log file, as on macOS, and to this console, where a launcher started from a
+    shortcut is the only window there is. Each console line is marked with the service it came from."""
+    with logfile:
+        for line in iter(stream.readline, b""):
+            logfile.write(line)
+            logfile.flush()
+            try:
+                with _console:
+                    sys.stdout.write(f"[{name}] {line.decode('utf-8', 'replace').rstrip()}\n")
+                    sys.stdout.flush()
+            except (OSError, ValueError):
+                pass  # the console is gone (its window is closing); the log file still gets the rest
+
+
 def spawn(name, argv, env):
     """A service in a process group of its own, so the console's Ctrl-C reaches this launcher only and it stops the rest."""
     logfile = open(STATE / f"{name}.log", "ab")
-    return subprocess.Popen([str(a) for a in argv], cwd=APP, env=env, stdout=logfile, stderr=subprocess.STDOUT,
+    # Unbuffered, so lines show up in the console as they happen rather than a pipe buffer at a time.
+    proc = subprocess.Popen([str(a) for a in argv], cwd=APP, env={**env, "PYTHONUNBUFFERED": "1"},
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    threading.Thread(target=_tee, args=(name, proc.stdout, logfile), daemon=True).start()
+    return proc
 
 
 def terminate(proc):
