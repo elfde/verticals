@@ -79,7 +79,8 @@ export const AgentTag = tracked(function AgentTag(attrs: Record<string, unknown>
         <AppIcon name="chevron-down" size={12} stroke={2.6} />
       </button>
       {s.open.value ? (
-        <div className="agent-picker vt-shadow vt-shadow--small" role="dialog" aria-label="Agent settings" onKeyDown={onEsc}>
+        <div className="agent-picker vt-shadow vt-shadow--small" role="dialog" aria-label="Agent settings" tabIndex={-1}
+          onKeyDown={onEsc}>
           <button type="button" className="agent-picker__new" data-role="new-conversation" onClick={s.startNew}>
             <AppIcon name="plus" size={14} />{' New conversation '}
           </button>
