@@ -41,6 +41,21 @@ typechecks and builds. Start migrates and rebuilds with the local instance's tok
 This is a local preview, not a public server. Never publish its generated bundle:
 it contains the local token. MCP is not started by the UI launcher. Docker is optional.
 
+### Windows
+
+The same two commands, with `python` (or `py -3.12`) instead of `python3`. PostgreSQL 16 is
+found at the EDB installer's default `C:\Program Files\PostgreSQL\16\bin`, or, without admin
+rights, unpack the server binaries zip from EnterpriseDB
+(`postgresql-16.x-windows-x64-binaries.zip`: its `bin`, `lib` and `share`) into
+`%LOCALAPPDATA%\Programs\PostgreSQL\16`. Anywhere else: set `VERTICALS_PG_BIN`.
+The database runs only while the launcher does; no Windows service is installed. Closing the
+launcher's console window stops everything as Ctrl-C does. A database left running by a killed
+launcher is reused by the next start.
+
+`.claude/skills/` holds symlinks. Git checks them out as plain files unless symlinks are
+allowed (Developer Mode, then `git config core.symlinks true` and a fresh checkout); without
+that, Claude Code does not see the repository's skills.
+
 ## Collaboration
 
 Submit changes as pull requests against `main`.

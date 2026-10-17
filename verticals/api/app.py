@@ -293,4 +293,6 @@ if __name__ == "__main__":
     import uvicorn
 
     # An open /api/events stream never ends by itself: without a limit, a stop waits on it for good.
-    uvicorn.run(app, host=_host, port=_port, log_level=_cfg.log_level, timeout_graceful_shutdown=1)
+    # On Windows uvicorn picks the Proactor loop, which psycopg's async connection (/api/events) cannot run on.
+    loop = "asyncio:SelectorEventLoop" if sys.platform == "win32" else "auto"
+    uvicorn.run(app, host=_host, port=_port, log_level=_cfg.log_level, timeout_graceful_shutdown=1, loop=loop)
