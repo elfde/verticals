@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 
 from tests.ui.conftest import UiSession
 from tests.ui.test_column_bars import (
-    _GEOMETRY, INK, LIGHT, PAGED, PERIODS, SPAN_HEADS, SPANS, STRIP, _blur, _col, _hover, _open, _rest, _step, _wait_bars,
+    _GEOMETRY, INK, LIGHT, PAGED, PERIODS, SPAN_HEADS, SPANS, STRIP, _blur, _col, _hover, _open, _step, _wait_bars,
     _wait_colours,
     ui_reduced_motion,  # noqa: F401  (the fixture)
 )
@@ -37,16 +37,16 @@ AWAY = {
 
 @pytest.mark.parametrize("stepped", PAGED)
 def test_each_column_shows_the_sign_its_own_period_calls_for(ui_f2: UiSession, stepped: str) -> None:
-    """A column whose period holds today shows `|||`; one whose period does not shows the dark middle bar alone, `|`. The
-    board pages as one, so each column judges for itself: a day on, Day stands away and Week, whose week still holds
-    today, does not."""
+    """Under the pointer a column whose period holds today shows `|||`; one whose period does not shows the dark middle bar
+    alone, `|`, each between its two side bars. The board pages as one, so each column judges for itself: a day on, Day
+    stands away and Week, whose week still holds today, does not."""
     page = _open(ui_f2)
     _step(page, stepped, "period-next", PERIODS[stepped][1])
-    _rest(page)
     for vertical in PAGED:
         away = vertical in AWAY[stepped]
-        bars = _wait_bars(page, vertical, 1 if away else 3)
-        assert [bar["color"] for bar in bars] == ([INK] if away else [LIGHT, INK, LIGHT]), f"{vertical}: {bars}"
+        _hover(page, vertical)
+        want = [LIGHT, INK, LIGHT] if away else [LIGHT, LIGHT, INK, LIGHT, LIGHT]
+        assert _wait_colours(page, vertical, want) == want, vertical
     expect(_col(page, "life").locator('[data-cap="period-nav"]')).to_have_count(0)
 
 
@@ -65,9 +65,9 @@ def test_the_single_bar_brings_the_board_back_to_today(ui_f2: UiSession) -> None
     assert len(_wait_bars(page, "week", 5)) == 5, "the pointer is still on the column: the sign and its two sides"
     expect(week.locator('[data-cap="period-today"]')).to_have_count(0)
     expect(week.locator('[data-cap="period-mode"]')).to_have_count(1)
-    _rest(page)
     for vertical in PAGED:
-        assert len(_wait_bars(page, vertical, 3)) == 3, vertical
+        _hover(page, vertical)
+        assert len(_wait_bars(page, vertical, 5)) == 5, vertical
     expect(page.locator(SPANS)).to_have_count(0)
 
 
@@ -165,9 +165,9 @@ def test_under_reduced_motion_the_light_bars_simply_go_and_come(ui_f2: UiSession
     light = f"{STRIP} > [data-vertical='week'] .column-bars__button--mode .column-bars__bar--outer"
     assert float(page.locator(light).first.evaluate("el => parseFloat(getComputedStyle(el).transitionDuration)")) < 0.001
     _step(page, "week", "period-next", "2026-W33")
-    _rest(page)
+    _hover(page, "week")  # the pointer is on the column, not on the side bar it just pressed
     _blur(page)
-    assert len(_wait_bars(page, "week", 1)) == 1
+    assert _wait_colours(page, "week", [LIGHT, INK, LIGHT]) == [LIGHT, INK, LIGHT]
     page.keyboard.press("t")
     expect(_col(page, "week")).to_have_attribute("data-period-key", "2026-W32")
-    assert [bar["color"] for bar in _wait_bars(page, "week", 3)] == [LIGHT, INK, LIGHT]
+    assert [bar["color"] for bar in _wait_bars(page, "week", 5)] == [LIGHT, LIGHT, INK, LIGHT, LIGHT]

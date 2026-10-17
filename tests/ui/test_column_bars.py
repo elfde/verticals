@@ -1,8 +1,8 @@
 """The period bars, | ||| |, on a line pinned at the column's top (docs/design/column-bars.md).
 
-Every column but Life shows three bars at rest, the middle one dark, in place of ← • →. A bar comes at each side under
-the pointer and steps the column to the period before and after; the middle one opens the column's spans mode, the one a
-dragged task opens on the column's corner (`lib/spans.ts`). When a column scrolls, the line holding them stays pinned at
+At rest the line shows no bars. Under the pointer every column but Life shows three, the middle one dark, in place of
+← • →, and a bar at each side that steps the column to the period before and after; the middle one opens the column's
+spans mode, the one a dragged task opens on the column's corner (`lib/spans.ts`). When a column scrolls, the line holding them stays pinned at
 its top on white, the goals fading out under it over 14 px; it names the kind while the column is at its top and the
 period once the big name has gone under it. A column whose period no longer holds today shows the dark middle bar alone,
 `|`, which brings the board back to today: that look is `test_column_bars_today.py`'s.
@@ -64,7 +64,7 @@ def _hover(page: Page, vertical: str) -> None:
 
 
 def _rest(page: Page) -> None:
-    """The pointer over Life, which has no bars: the other six stand at rest."""
+    """The pointer over Life, which has no bars: the other six are at rest."""
     _hover(page, "life")
     page.wait_for_timeout(50)
 
@@ -98,7 +98,7 @@ def _open(session: UiSession, anchor: str | None = None, width: int | None = Non
 
 
 # What the eye sees of a column's bars: where each stands, in px from the column's own edges, and its colour, counting
-# only those that are not faded out (a side bar at rest is there for the keyboard and invisible).
+# only those that are not faded out (a bar at rest is there for the keyboard and invisible).
 _BARS = """(vertical) => {
   const col = document.querySelector(`[data-role="column-strip"] > [data-vertical="${vertical}"]`);
   const box = col.getBoundingClientRect();
@@ -157,69 +157,63 @@ def _blur(page: Page) -> None:
     page.evaluate("() => document.activeElement instanceof HTMLElement && document.activeElement.blur()")
 
 
-def test_every_column_but_life_shows_three_bars_at_rest(ui_f2: UiSession) -> None:
-    """|||, the middle one dark, in each of the six columns that page; Life has none, and the dot that was "Today" is gone."""
+def test_the_bars_show_only_under_the_pointer(ui_f2: UiSession) -> None:
+    """At rest no column shows a bar. Under the pointer a column shows | ||| |, the middle one dark, in each of the six
+    columns that page, and only in the one the pointer is on; Life has none, and the dot that was "Today" is gone."""
     page = _open(ui_f2)
     _rest(page)
     for vertical in PAGED:
-        bars = _wait_bars(page, vertical, 3)
-        assert [bar["color"] for bar in bars] == [LIGHT, INK, LIGHT], f"{vertical}: {bars}"
+        assert _wait_bars(page, vertical, 0) == [], f"{vertical}: no bars at rest"
+    for vertical in PAGED:
+        _hover(page, vertical)
+        bars = _wait_bars(page, vertical, 5)
+        assert [bar["color"] for bar in bars] == [LIGHT, LIGHT, INK, LIGHT, LIGHT], f"{vertical}: {bars}"
+        assert [bar["cap"] for bar in bars] == ["period-prev", "period-mode", "period-mode", "period-mode", "period-next"]
         assert all((bar["w"], bar["h"]) == (BAR_W, BAR_H) for bar in bars), f"{vertical}: the bars' size"
         assert len({round(bar["bottom"], 2) for bar in bars}) == 1, f"{vertical}: the bars stand on one line"
-        assert _gaps(bars) == [GAP_IN, GAP_IN], f"{vertical}: 3 px between the bars of the sign"
-        # the sign is set in from the right margin by the bar that comes at its side and the gap before it
-        assert bars[-1]["right"] == pytest.approx(MARGIN + BAR_W + GAP_OUT, abs=0.01), f"{vertical}: {bars[-1]}"
+        assert _gaps(bars) == [GAP_OUT, GAP_IN, GAP_IN, GAP_OUT], f"{vertical}: 3 px in the sign, 6 to its sides"
+        assert bars[-1]["right"] == pytest.approx(MARGIN, abs=0.01), f"{vertical}: {bars[-1]}"
+        others = {other: _wait_bars(page, other, 0) for other in PAGED if other != vertical}
+        assert not any(others.values()), f"the pointer is on {vertical} only: {others}"
     expect(_col(page, "life").locator('[data-cap="period-nav"]')).to_have_count(0)
     expect(page.locator('[data-cap="period-today"]')).to_have_count(0)
     expect(page.locator(".column-period-controls")).to_have_count(0)
     # they stand on the kind line, on the baseline of its type, 22 px under the column's top, and reach its cap height
-    week = _bars(page, "week")[0]
-    assert week["bottom"] == pytest.approx(22, abs=0.01) and week["top"] == pytest.approx(11, abs=0.01)
-
-
-def test_a_bar_comes_at_each_side_under_the_pointer(ui_f2: UiSession) -> None:
-    """| ||| |: the two outer bars come at once under the pointer and the sign in the middle stays where it was; the other
-    columns keep their three; leaving, the sides go."""
-    page = _open(ui_f2)
-    _rest(page)
-    at_rest = _wait_bars(page, "week", 3)
     _hover(page, "week")
-    bars = _wait_bars(page, "week", 5)
-    assert [bar["color"] for bar in bars] == [LIGHT, LIGHT, INK, LIGHT, LIGHT], bars
-    assert [bar["cap"] for bar in bars] == ["period-prev", "period-mode", "period-mode", "period-mode", "period-next"]
-    assert _gaps(bars) == [GAP_OUT, GAP_IN, GAP_IN, GAP_OUT]
-    assert bars[-1]["right"] == pytest.approx(MARGIN, abs=0.01)
-    assert [(b["left"], b["top"]) for b in bars[1:4]] == [(b["left"], b["top"]) for b in at_rest], "the sign stays put"
-    assert len(_bars(page, "day")) == 3 and len(_bars(page, "month")) == 3, "the pointer is on Week only"
+    week = _wait_bars(page, "week", 5)[0]
+    assert week["bottom"] == pytest.approx(22, abs=0.01) and week["top"] == pytest.approx(11, abs=0.01)
     _hover(page, "life")
-    assert len(_wait_bars(page, "week", 3)) == 3
+    assert _wait_bars(page, "week", 0) == [], "leaving, the bars go"
 
 
 @pytest.mark.parametrize("ui_reduced_motion", ["no-preference"], indirect=True)
-def test_the_side_bars_appear_at_once_and_fade_back_in_200_ms(ui_f2: UiSession) -> None:
-    """The side bars come with the pointer, in the first frame, and go in 200 ms."""
+def test_the_bars_appear_at_once_and_fade_back_in_200_ms(ui_f2: UiSession) -> None:
+    """All three buttons come with the pointer, in the first frame, and go in 200 ms, as one."""
     page = _open(ui_f2)
     _rest(page)
-    side = f"{STRIP} > [data-vertical='week'] [data-cap='period-next']"
-    assert page.locator(side).evaluate("el => getComputedStyle(el).transitionDuration") == "0.2s", "the fade back takes 200 ms"
+    buttons = f"{STRIP} > [data-vertical='week'] .column-bars__button"
+    durations = page.locator(buttons).evaluate_all("els => els.map((el) => getComputedStyle(el).transitionDuration)")
+    assert durations == ["0.2s"] * 3, "the fade back takes 200 ms"
     page.evaluate(
-        """(side) => {
-          const el = document.querySelector(side); const t0 = performance.now(); const log = [];
+        """(buttons) => {
+          const els = [...document.querySelectorAll(buttons)]; const t0 = performance.now(); const log = [];
           window.__fade = log;
-          const tick = () => { log.push([performance.now() - t0, parseFloat(getComputedStyle(el).opacity)]); if (performance.now() - t0 < 1500) requestAnimationFrame(tick); };
+          const tick = () => { log.push([performance.now() - t0, ...els.map((el) => parseFloat(getComputedStyle(el).opacity))]); if (performance.now() - t0 < 1500) requestAnimationFrame(tick); };
           requestAnimationFrame(tick);
         }""",
-        side,
+        buttons,
     )
     page.wait_for_timeout(150)
     _hover(page, "week")
     page.wait_for_timeout(300)
     _hover(page, "life")
     page.wait_for_timeout(700)
-    log = page.evaluate("window.__fade")
+    frames = page.evaluate("window.__fade")
+    assert all(max(f[1:]) - min(f[1:]) < 1e-9 for f in frames), "the three are never apart"
+    log = [(f[0], f[1]) for f in frames]
     came = next(i for i, (_, o) in enumerate(log) if o > 0.01)
     full = next(i for i, (_, o) in enumerate(log) if o > 0.99)
-    assert log[full][0] - log[came][0] <= 90, f"the side bar took {log[full][0] - log[came][0]:.0f} ms to come: it appears at once"
+    assert log[full][0] - log[came][0] <= 90, f"the bars took {log[full][0] - log[came][0]:.0f} ms to come: it appears at once"
     left = next(i for i in range(full, len(log)) if log[i][1] < 0.999)
     gone = next(i for i in range(left, len(log)) if log[i][1] <= 0.001)
     assert any(0.02 < o < 0.98 for _, o in log[left:gone]), "it fades, it does not cut"
@@ -227,7 +221,7 @@ def test_the_side_bars_appear_at_once_and_fade_back_in_200_ms(ui_f2: UiSession) 
     assert 100 <= took <= 320, f"the fade back takes {took:.0f} ms, 200 by design"
 
 
-def test_under_reduced_motion_the_side_bars_simply_appear_and_go(ui_f2: UiSession) -> None:
+def test_under_reduced_motion_the_bars_simply_appear_and_go(ui_f2: UiSession) -> None:
     page = _open(ui_f2)
     _rest(page)
     side = f"{STRIP} > [data-vertical='week'] [data-cap='period-prev']"
@@ -236,7 +230,7 @@ def test_under_reduced_motion_the_side_bars_simply_appear_and_go(ui_f2: UiSessio
     assert len(_wait_bars(page, "week", 5)) == 5
     _hover(page, "life")
     _frames(page)
-    assert len(_bars(page, "week")) == 3
+    assert _bars(page, "week") == []
 
 
 def test_a_bar_under_the_pointer_darkens(ui_f2: UiSession) -> None:
@@ -308,12 +302,12 @@ def test_t_still_goes_back_to_today(ui_f2: UiSession) -> None:
     """The board's own key to today works as it did, and the sign turns back into three bars."""
     page = _open(ui_f2)
     _step(page, "week", "period-next", "2026-W33")
-    _rest(page)
+    _hover(page, "week")  # the pointer is on the column, not on the side bar it just pressed
     _blur(page)
-    assert len(_wait_bars(page, "week", 1)) == 1
+    assert _wait_colours(page, "week", [LIGHT, INK, LIGHT]) == [LIGHT, INK, LIGHT], "the single bar between its sides"
     page.keyboard.press("t")
     expect(_col(page, "week")).to_have_attribute("data-period-key", "2026-W32")
-    assert [bar["color"] for bar in _wait_bars(page, "week", 3)] == [LIGHT, INK, LIGHT]
+    assert [bar["color"] for bar in _wait_bars(page, "week", 5)] == [LIGHT, LIGHT, INK, LIGHT, LIGHT]
 
 
 def test_a_click_on_the_lines_words_does_what_a_click_on_the_header_does(ui_f2: UiSession) -> None:
@@ -338,6 +332,7 @@ def test_the_middle_bar_opens_the_spans_mode(ui_f2: UiSession, vertical: str, vi
     hand, leaves it and the board is as it was."""
     page = _open(ui_f2)
     here = _col(page, vertical).get_attribute("data-period-key")
+    _hover(page, vertical)
     _col(page, vertical).locator('[data-cap="period-mode"]').click()
     expect(page.locator(SPANS)).to_have_count(1, timeout=5000)
     expect(page.locator(SPANS)).to_have_attribute("data-vertical", vertical)
@@ -667,11 +662,11 @@ def test_the_bars_are_buttons_named_by_what_they_do(ui_f2: UiSession) -> None:
 
 def test_the_keyboard_reaches_every_bar_and_shows_them(ui_f2: UiSession) -> None:
     """Tab goes through a column's three bars, which come first in it, whether the pointer is there or not, and a bar in
-    focus brings its sides into view; Enter pages, Space brings a paged column back to today and then opens the mode, Esc
+    focus brings them all into view; Enter pages, Space brings a paged column back to today and then opens the mode, Esc
     leaves it."""
     page = _open(ui_f2)
     _rest(page)
-    assert len(_bars(page, "week")) == 3
+    assert _bars(page, "week") == []
     week = _col(page, "week")
     week.locator('[data-cap="period-prev"]').focus()
     assert len(_wait_bars(page, "week", 5)) == 5, "a bar in focus shows the whole sign"
@@ -695,7 +690,7 @@ def test_the_keyboard_reaches_every_bar_and_shows_them(ui_f2: UiSession) -> None
     expect(page.locator(SPANS)).to_have_count(0, timeout=5000)
 
 
-def test_on_touch_the_side_bars_stay_in_view(ui_f2: UiSession) -> None:
+def test_on_touch_the_bars_stay_in_view(ui_f2: UiSession) -> None:
     """Nothing hovers on a touch screen, so the bars are all there at rest, and a tap does what the pointer does: the
     side bars page, the single bar goes back to today, the three open the mode."""
     context = ui_f2.context.browser.new_context(

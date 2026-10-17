@@ -87,17 +87,17 @@
 .column-bars__button:active .column-bars__bar--outer { transition: opacity var(--motion-title) var(--vt-ease-small); }
 .column-bars__button:focus-visible .column-bars__mark,
 .column-bars__button:active .column-bars__mark { background: rgb(45 48 54 / 8%); }
-/* Nothing hovers on a touch screen, so the side bars stay in view there; where a pointer can hover they come with it:
-   at once, and fade back in 200 ms (none under reduced motion, where the token is 0). Held in view by a keyboard's focus
-   (a mouse's leaves the pointer's way alone). */
+/* Nothing hovers on a touch screen, so the bars stay in view there; where a pointer can hover they come with it, all
+   of them: at once, and fade back in 200 ms (none under reduced motion, where the token is 0). Held in view by a
+   keyboard's focus (a mouse's leaves the pointer's way alone). */
 @media (hover: hover) and (pointer: fine) {
-  .column-bars__button--side {
+  .column-bars__button {
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--motion-bars) var(--vt-ease-large);
   }
-  .pattern-vertical-board__column:hover .column-bars__button--side,
-  .column-bars:has(:focus-visible) .column-bars__button--side {
+  .pattern-vertical-board__column:hover .column-bars__button,
+  .column-bars:has(:focus-visible) .column-bars__button {
     opacity: 1;
     pointer-events: auto;
     transition: none;

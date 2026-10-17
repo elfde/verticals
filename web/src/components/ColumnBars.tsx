@@ -38,7 +38,7 @@ export const ColumnBars = tracked(function ColumnBars(raw: Props & Record<string
       }, attrs)}
     >
       <button
-        className="column-bars__button column-bars__button--prev column-bars__button--side"
+        className="column-bars__button column-bars__button--prev"
         type="button"
         aria-label={`Previous ${noun}`}
         data-cap="period-prev"
@@ -52,7 +52,7 @@ export const ColumnBars = tracked(function ColumnBars(raw: Props & Record<string
         onClick={onMiddle}
       ><span className="column-bars__mark"><i className="column-bars__bar column-bars__bar--outer"></i><i className="column-bars__bar column-bars__bar--ink"></i><i className="column-bars__bar column-bars__bar--outer"></i></span></button>
       <button
-        className="column-bars__button column-bars__button--next column-bars__button--side"
+        className="column-bars__button column-bars__button--next"
         type="button"
         aria-label={`Next ${noun}`}
         data-cap="period-next"
