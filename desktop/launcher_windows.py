@@ -29,6 +29,7 @@ if __name__ == "__main__" and not sys.flags.utf8_mode:
             pass  # the console's Ctrl-C reaches the child too; it stops everything, then this ends with it
 
 import json  # noqa: E402
+import queue  # noqa: E402
 import shutil  # noqa: E402
 import socket  # noqa: E402
 import threading  # noqa: E402
@@ -169,7 +170,19 @@ with psycopg.connect(os.environ['VERTICALS_DATABASE_URL']) as c:
 
 # ---------------------------------------------------------------- services
 
-_console = threading.Lock()
+# Lines on their way to the console. A console with a selection in it (a click in the window) blocks every write until
+# the selection ends; the services must not wait on that, so a full queue drops console lines, never log file lines.
+_console = queue.Queue(maxsize=1000)
+
+
+def _console_writer():
+    while True:
+        text = _console.get()
+        try:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+        except (OSError, ValueError):
+            pass  # the console is gone (its window is closing)
 
 
 def _tee(name, stream, logfile):
@@ -180,11 +193,9 @@ def _tee(name, stream, logfile):
             logfile.write(line)
             logfile.flush()
             try:
-                with _console:
-                    sys.stdout.write(f"[{name}] {line.decode('utf-8', 'replace').rstrip()}\n")
-                    sys.stdout.flush()
-            except (OSError, ValueError):
-                pass  # the console is gone (its window is closing); the log file still gets the rest
+                _console.put_nowait(f"[{name}] {line.decode('utf-8', 'replace').rstrip()}\n")
+            except queue.Full:
+                pass
 
 
 def spawn(name, argv, env):
@@ -235,6 +246,10 @@ def main():
     build_ui()
     env = app.environment(cfg)
     env["PYTHONUTF8"] = "1"  # the services read UTF-8 files too
+    # The macOS app has no console and keeps its services at "warning". Here their output is on screen, so show each
+    # request as tools/local.py does; VERTICALS_DESKTOP_LOG_LEVEL=warning makes them quiet again.
+    env["VERTICALS_LOG_LEVEL"] = os.environ.get("VERTICALS_DESKTOP_LOG_LEVEL", "info")
+    threading.Thread(target=_console_writer, daemon=True).start()
     procs, state = [], {"db": False, "gateway": None, "chat": None}
     stopping = threading.Lock()
 

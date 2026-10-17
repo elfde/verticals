@@ -150,7 +150,8 @@ PostgreSQL 16 is found as `tools/local.py` finds it (see the main README). Same 
 above, plus `VERTICALS_DESKTOP_HOSTS`: other names the browser uses for the UI, comma-separated with their port when it
 is not 80 (say `verticals.localhost` forwarded from port 80); the gateway answers no host it was not told. Closing the console window stops everything as Ctrl-C does; a database left running by a killed launcher is reused.
 The API's and MCP server's output goes to `api.log` and `mcp.log` as on macOS and also to the console, each line marked
-`[api]` or `[mcp]`.
+`[api]` or `[mcp]`. They log each request (`info`, as `tools/local.py` does); `VERTICALS_DESKTOP_LOG_LEVEL=warning` keeps
+them as quiet as on macOS. A console with a selection in it pauses only the console, never the services.
 On Windows Claude's system prompt travels in a file (`--append-system-prompt-file`), because the morning report's prompt
 is close to Windows' 32,767-character command line. Opening a task's session in a terminal is macOS-only for now.
 
