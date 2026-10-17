@@ -8,6 +8,7 @@ it the conversation so far.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -16,6 +17,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import tomllib
@@ -287,10 +289,25 @@ def child_env(extra=None):
     env = {k: v for k, v in os.environ.items()
            if not (k.startswith("CLAUDE") and k not in ENV_KEEP) and not k.startswith(("VERTICALS_", "PYTHON"))}
     extra_path = [str(Path.home() / ".local/bin"), "/opt/homebrew/bin", "/usr/local/bin"]
-    path = env.get("PATH", "").split(":")
-    env["PATH"] = ":".join(path + [p for p in extra_path if p not in path])
+    path = env.get("PATH", "").split(os.pathsep)
+    env["PATH"] = os.pathsep.join(path + [p for p in extra_path if p not in path])
     env.update(extra or {})
     return env
+
+
+def system_prompt_args(chat, text):
+    """How Claude is told its prompt. Windows caps a command line at 32,767 characters and the morning report's prompt alone
+    comes near that, so there the prompt goes in a file, one per distinct prompt, named by its content."""
+    if os.name != "nt":
+        return ["--append-system-prompt", text]
+    folder = Path(getattr(chat, "state_dir", None) or tempfile.gettempdir()) / "prompts"
+    folder.mkdir(exist_ok=True)
+    path = folder / f"{hashlib.sha256(text.encode()).hexdigest()[:16]}.md"
+    if not path.exists():
+        part = path.with_suffix(f".{uuid.uuid4().hex}.tmp")  # two seats starting at once never see half a file
+        part.write_text(text, encoding="utf-8")
+        os.replace(part, path)
+    return ["--append-system-prompt-file", str(path)]
 
 
 def which(provider):
@@ -510,7 +527,7 @@ class ClaudeAgent:
                 "--settings", json.dumps(claude_settings),
                 *(["--add-dir", str(Path.home())] if self.full else ["--tools", ""]),
                 "--allowedTools", ",".join(self.allowed),
-                "--append-system-prompt", prompt if prompt is not None else PROMPT + "\n" + brief,
+                *system_prompt_args(chat, prompt if prompt is not None else PROMPT + "\n" + brief),
                 "--resume" if resume_id else "--session-id", self.session_id]
         if settings.get("model") and settings["model"] != "default":
             args += ["--model", settings["model"]]

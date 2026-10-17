@@ -134,6 +134,24 @@ for the chat, an agent CLI: `claude` (signed in) and optionally `codex`.
 Ports: UI 8288, API 8299, MCP 8281, PostgreSQL 55539 (override with `VERTICALS_DESKTOP_UI_PORT`,
 `..._API_PORT`, `..._MCP_PORT`, `..._PG_PORT`). State: `VERTICALS_DESKTOP_STATE`.
 
+### Windows
+
+There is no app to build: `desktop/launcher_windows.py` starts the same services, the gateway and the chat, and the board
+opens in a browser. It is a sibling of `launcher.py`, which it imports for everything but what differs on Windows (where
+PostgreSQL and Python are, starting the database, starting and stopping services, the console window's close).
+
+```powershell
+python tools/local.py setup             # once: the repository's .venv and web/node_modules
+python desktop/launcher_windows.py      # UI: http://127.0.0.1:8288/ (builds desktop/build/web on first run)
+python desktop/launcher_windows.py mcp  # how to connect an agent to MCP
+```
+
+PostgreSQL 16 is found as `tools/local.py` finds it (see the main README). Same state folder, ports and variables as
+above, plus `VERTICALS_DESKTOP_HOSTS`: other names the browser uses for the UI, comma-separated with their port when it
+is not 80 (say `verticals.localhost` forwarded from port 80); the gateway answers no host it was not told. Closing the console window stops everything as Ctrl-C does; a database left running by a killed launcher is reused.
+On Windows Claude's system prompt travels in a file (`--append-system-prompt-file`), because the morning report's prompt
+is close to Windows' 32,767-character command line. Opening a task's session in a terminal is macOS-only for now.
+
 ## Build the app
 
 After step 1 above, on an Apple Silicon Mac with Homebrew `postgresql@16`, uv (Python 3.12) and
