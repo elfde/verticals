@@ -223,6 +223,38 @@ function findGoalById(id: string): GoalCard | undefined {
   return findGoal(state.board, id)
 }
 
+/** A value is a parentless goal in Life; its colour is the one every goal under it shows (D231).
+ *  The open goal's detail answers for a goal the board doesn't hold. */
+function valueColorOf(id: string): { color: string | null } | null {
+  const detail = state.goalDetail?.id === id ? state.goalDetail : undefined
+  const goal = findGoalById(id) ?? detail
+  if (!goal || goal.parent_id !== null || goal.vertical !== 'life') return null
+  return { color: colorPreview?.id === id ? colorPreview.color : goal.color }
+}
+
+/* A colour tried on a value before it is picked: the value and every goal under it on the board wear it, and give
+   back their own when it ends. Picking keeps what they wear, since the saved colour is the same. */
+let colorPreview: { id: string; color: string | null; goals: { goal: GoalCard; color: string | null }[] } | null = null
+
+function previewValueColor(id: string, color: string | null): void {
+  if (colorPreview && (colorPreview.id !== id || color === null)) {
+    for (const { goal, color: own } of colorPreview.goals) goal.color = own
+    colorPreview = null
+  }
+  if (color === null || !state.board || !valueColorOf(id)) return
+  if (!colorPreview) {
+    const board = state.board
+    const all = [...board.columns.flatMap((column) => column.goals), ...Object.values(board.children).flat(), ...board.values]
+    const goals = [...new Set(all)].filter((goal) => goal.id === id || ancestorIds(board, goal.id).at(-1) === id)
+    colorPreview = { id, color: findGoalById(id)?.color ?? null, goals: goals.map((goal) => ({ goal, color: goal.color })) }
+  }
+  for (const { goal } of colorPreview.goals) goal.color = color
+}
+
+function keepValueColor(): void {
+  colorPreview = null
+}
+
 /** The rendered host identity of a board goal — the pure walk lives in `lib/boardIndex.ts`
  *  (`boardGoalHost`); this is the store's thin bind of the current board, same shape as
  *  `reparentTargets` below. */
@@ -695,6 +727,9 @@ export const store = {
   parentVertical,
   boardGoalHost,
   sameVerticalParentId,
+  valueColorOf,
+  previewValueColor,
+  keepValueColor,
   isCollapsed,
   toggleCollapsed,
   reparentTargets,

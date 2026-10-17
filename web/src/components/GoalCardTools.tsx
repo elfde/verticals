@@ -1,4 +1,4 @@
-/* A goal card's dots and the menu under them: the agent's work, when, where, tags of
+/* A goal card's dots and the menu under them: a value's colour, the agent's work, when, where, tags of
    the open goal, and Delete, each group under a small grey word; Date and Into a goal take the menu's place as a step.
    One place for the menu: it hangs below the dots, starting at them, and goes above only when there's no room below. */
 import type { MouseEvent as ReactMouseEvent, ReactNode, Ref as ReactRef } from 'react'
@@ -8,6 +8,7 @@ import { KChip, KInlineAdd } from '../kit'
 import type { VerticalScale } from '../lib/periods'
 import { isoDate, localDate, periodKeyFor } from '../lib/schedule'
 import { playSound } from '../lib/sound'
+import { DEV_PALETTE, devPaletteFor, rgbaFromHex } from '../lib/devPalette'
 import { store, todayIso } from '../store'
 import { agentChat as agentChatState } from '../lib/agentChat'
 import { PopoverEngine, type PopoverTriggerSlot } from './PopoverEngine'
@@ -65,6 +66,7 @@ export const GoalCardTools = tracked(function GoalCardTools(raw: Props & Record<
     }
 
     function onClose() {
+      store.previewValueColor(props.id, null)
       open.value = false
       step.value = null
       props.onOpenChange?.(false)
@@ -105,6 +107,19 @@ export const GoalCardTools = tracked(function GoalCardTools(raw: Props & Record<
       void store.updateGoal(props.id, { tags: tags.value.filter((t) => t !== tag) })
     }
 
+    /* A value's colour, the one every goal under it shows (D231); other goals have none of their own. The menu stays
+       open, so the card behind it shows each colour as it is picked. */
+    const value = computed(() => store.valueColorOf(props.id))
+    function setColor(color: string) {
+      if (value.value?.color === color) return
+      store.keepValueColor()
+      void store.updateGoal(props.id, { color })
+    }
+    /* Under the pointer a colour shows at once on the value and its goals; it is saved only by a click. */
+    function previewColor(color: string | null) {
+      store.previewValueColor(props.id, color)
+    }
+
     function remove() {
       playSound('goal_deleted')
       void store.removeGoal(props.id)
@@ -113,7 +128,7 @@ export const GoalCardTools = tracked(function GoalCardTools(raw: Props & Record<
     exposeTo(props.expose, { openMenu })
     return {
       trigger, open, showAgent, discuss, startWork, fixedSameVerticalParent, repeatVertical, showReschedule, onOpen, onClose,
-      closeMenu, step, tomorrow, nextWeek, moveToInbox, moveTo, tags, addTag, removeTag, remove,
+      closeMenu, step, tomorrow, nextWeek, moveToInbox, moveTo, tags, addTag, removeTag, value, setColor, previewColor, remove,
     }
   })
 
@@ -129,8 +144,26 @@ export const GoalCardTools = tracked(function GoalCardTools(raw: Props & Record<
     const fixed = s.fixedSameVerticalParent.value
     const repeatVertical = s.repeatVertical.value
     const tags = s.tags.value
+    const value = s.value.value
     return (
       <div className="goal-actions__content" data-role="goal-actions-menu">
+        {value ? (
+          <div className="goal-actions__section" data-menu-section="color" role="group" aria-label="Color">
+            <div className="goal-actions__colors" data-role="value-colors" data-picked={value.color ? '' : undefined}
+              onMouseLeave={() => s.previewColor(null)}>
+              {DEV_PALETTE.map(({ key, label, source }) => {
+                const box = devPaletteFor(source)?.box
+                return (
+                  <button key={key} type="button" role="menuitemradio" className="goal-actions__color" data-color={source}
+                    aria-label={label} aria-checked={value.color === source}
+                    style={{ backgroundColor: box ? rgbaFromHex(box.color, box.opacity) : source }}
+                    onMouseEnter={() => s.previewColor(source)} onClick={() => s.setColor(source)} />
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
         {s.showAgent.value ? (
           <div className="goal-actions__section" data-menu-section="agent" role="group" aria-label="Agent">
             <p className="goal-actions__heading" aria-hidden="true">Agent</p>
