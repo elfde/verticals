@@ -146,16 +146,15 @@
   text-align: center;
 }
 .goal-actions__days button { justify-content: center; padding-inline: 6px; }
-/* A value's colours: six bars with no heading, filling the menu between the items' 14 px text edges. Once a colour is
-   picked the others fade, and come back whole under the pointer or the keyboard's focus. */
-.goal-actions__colors { display: flex; gap: 6px; padding: 4px 14px; }
+/* A value's colours: six circles with no heading, in the items' 14 px text edge. Once a colour is picked the others fade,
+   and come back whole under the pointer or the keyboard's focus. */
+.goal-actions__colors { display: flex; gap: 10px; padding: 4px 14px; }
 .goal-actions__color {
-  flex: 1 1 0;
-  min-width: 0;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 50%;
   cursor: pointer;
   transition: opacity var(--motion-hover) cubic-bezier(.165, .84, .44, 1);
 }
