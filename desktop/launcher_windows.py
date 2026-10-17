@@ -53,6 +53,16 @@ NPM = shutil.which("npm") or "npm"  # npm.cmd: a bare "npm" is not found without
 log = app.log
 
 
+class Gateway(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # Browsers open spare connections and drop them unused; Windows reports that as a reset, macOS as a plain close.
+        if isinstance(sys.exc_info()[1], (ConnectionResetError, ConnectionAbortedError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def run(args, **kw):
     return subprocess.run([str(a) for a in args], check=True, cwd=kw.pop("cwd", APP), **kw)
 
@@ -229,8 +239,7 @@ def main():
                                    "--gateway-url", f"http://127.0.0.1:{UI_PORT}"], env))
         state["chat"] = app.Chat(STATE, f"http://127.0.0.1:{MCP_PORT}/mcp", cfg["token"],
                                  api_url=f"http://127.0.0.1:{API_PORT}")
-        gateway = ThreadingHTTPServer(("127.0.0.1", UI_PORT), app.make_gateway(cfg["token"], state["chat"]))
-        gateway.daemon_threads = True
+        gateway = Gateway(("127.0.0.1", UI_PORT), app.make_gateway(cfg["token"], state["chat"]))
         state["gateway"] = gateway
         threading.Thread(target=gateway.serve_forever, daemon=True).start()
         app.wait_healthy()
