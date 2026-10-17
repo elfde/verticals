@@ -50,7 +50,9 @@ rights, unpack the server binaries zip from EnterpriseDB
 `%LOCALAPPDATA%\Programs\PostgreSQL\16`. Anywhere else: set `VERTICALS_PG_BIN`.
 The database runs only while the launcher does; no Windows service is installed. Closing the
 launcher's console window stops everything as Ctrl-C does. A database left running by a killed
-launcher is reused by the next start.
+launcher is reused by the next start, on every system. What differs between the systems lives in
+`verticals/host/` (`posix.py`, `windows.py`); the launchers themselves are the same everywhere.
+The desktop launcher with the agent chat runs on Windows too: see `desktop/README.md`.
 
 `.claude/skills/` holds symlinks. Git checks them out as plain files unless symlinks are
 allowed (Developer Mode, then `git config core.symlinks true` and a fresh checkout); without
