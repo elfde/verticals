@@ -89,8 +89,11 @@ def _claude(settings, sources=None, role=None):
 
 
 def _system_prompt(agent) -> str:
+    """The prompt Claude is told, inline or, where the system caps a command line, in the file it is handed."""
     args = agent.proc.args
-    return args[args.index("--append-system-prompt") + 1]
+    if "--append-system-prompt" in args:
+        return args[args.index("--append-system-prompt") + 1]
+    return Path(args[args.index("--append-system-prompt-file") + 1]).read_text(encoding="utf-8")
 
 
 def test_an_ask_for_a_verticals_write_carries_the_write_so_the_card_can_say_what_changes() -> None:
@@ -136,7 +139,7 @@ def test_another_mode_gives_claude_its_tools_and_asks_in_the_chat() -> None:
     args = agent.proc.args
     assert "--tools" not in args and "--strict-mcp-config" not in args
     assert args[args.index("--add-dir") + 1] == str(Path.home())
-    assert "Claude Code's own tools" in args[args.index("--append-system-prompt") + 1]
+    assert "Claude Code's own tools" in _system_prompt(agent)
     _bash(agent)
     assert session.asked == ["Allow Claude to use Bash?"]
 

@@ -22,6 +22,13 @@ def _chat():
     return module
 
 
+def _prompt(args) -> str:
+    """The prompt Claude is told, inline or, where the system caps a command line, in the file it is handed."""
+    if "--append-system-prompt" in args:
+        return args[args.index("--append-system-prompt") + 1]
+    return Path(args[args.index("--append-system-prompt-file") + 1]).read_text(encoding="utf-8")
+
+
 def _checkout(path: Path, name: str = "verticals") -> Path:
     """A folder that is a checkout of Verticals' source as far as the chat can tell: a git repository with the project's
     pyproject.toml and the desktop launcher in it."""
@@ -75,8 +82,7 @@ def test_the_reports_come_in_every_turn_but_the_unattended_morning_one() -> None
     host = types.SimpleNamespace(claude_config=lambda session_id=None: Path("mcp.json"), workdir=Path("."))
     for settings, wanted in (({"permission": "manual"}, True), ({"permission": "board"}, True), ({"sources": "connected"}, False)):
         agent = chat.ClaudeAgent(host, _Session(), chat.clean_settings(settings), None)
-        args = agent.proc.args
-        prompt = args[args.index("--append-system-prompt") + 1]
+        prompt = _prompt(agent.proc.args)
         assert ("## Reports from the app" in prompt) is wanted, settings
     assert "## Reports from the app" in chat.codex_instructions(chat.clean_settings({"provider": "codex"}))
     assert "## Reports from the app" not in chat.codex_instructions(chat.clean_settings({"provider": "codex", "sources": "connected"}))
