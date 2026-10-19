@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 __all__ = [
-    "EXE", "PG_BIN_DIRS", "PG_HINT", "NPM", "SERVICE_ENV", "SERVICE_LOG_LEVEL", "KEEP_ENV", "NEW_GROUP", "BACKGROUND",
+    "EXE", "PG_BIN_DIRS", "PG_HINT", "NPM", "SERVICE_ENV", "KEEP_ENV", "NEW_GROUP", "BACKGROUND",
     "UVICORN_LOOP", "DROPPED_CONNECTION", "COMMAND_LINE_MAX",
     "venv_python", "python312", "port_free", "postgres_options", "pg_env", "spawn_service", "stop_tree", "kill_tree",
     "on_close", "ensure_utf8", "OutputReader",
@@ -48,8 +48,6 @@ def python312() -> str | None:
 
 # Source files are UTF-8; Windows would otherwise read them in its ANSI code page.
 SERVICE_ENV = {"PYTHONUTF8": "1"}
-# The launcher's console is the only window there is, and it shows the services' output: each request, as on a server.
-SERVICE_LOG_LEVEL = "info"
 # Without these a program cannot find its system DLLs, its profile, or a temp folder.
 KEEP_ENV = ("SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "USERNAME", "APPDATA", "LOCALAPPDATA",
             "PROGRAMDATA", "PROGRAMFILES", "TEMP", "TMP")
@@ -85,44 +83,10 @@ def pg_env() -> dict[str, str]:
     return os.environ.copy()
 
 
-# Lines on their way to the console. A console with a selection in it (a click in the window) blocks every write until
-# the selection ends; the services must not wait on that, so a full queue drops console lines, never log file lines.
-_console: queue.Queue[str] = queue.Queue(maxsize=1000)
-_console_started = threading.Lock()
-
-
-def _console_writer() -> None:
-    while True:
-        text = _console.get()
-        try:
-            sys.stdout.write(text)
-            sys.stdout.flush()
-        except (OSError, ValueError):
-            pass  # the console is gone (its window is closing)
-
-
-def _tee(name: str, stream: Any, logfile: Any) -> None:
-    with logfile:
-        for line in iter(stream.readline, b""):
-            logfile.write(line)
-            logfile.flush()
-            try:
-                _console.put_nowait(f"[{name}] {line.decode('utf-8', 'replace').rstrip()}\n")
-            except queue.Full:
-                pass
-
-
 def spawn_service(name: str, argv: list, *, cwd: Path, env: dict[str, str], logfile: Path) -> subprocess.Popen:
-    """A launcher's service: its output goes to its log file, as on macOS, and to this console, each line marked with the
-    service it came from, since a launcher started from a shortcut has no other window."""
-    if _console_started.acquire(blocking=False):
-        threading.Thread(target=_console_writer, daemon=True).start()
+    """A launcher's service: its output goes to its log file, and it runs in a process group of its own."""
     log = open(logfile, "ab")
-    # Unbuffered, so lines show up as they happen rather than a pipe buffer at a time.
-    proc = subprocess.Popen([str(a) for a in argv], cwd=cwd, env={**env, "PYTHONUNBUFFERED": "1"},
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **NEW_GROUP)
-    threading.Thread(target=_tee, args=(name, proc.stdout, log), daemon=True).start()
-    return proc
+    return subprocess.Popen([str(a) for a in argv], cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT, **NEW_GROUP)
 
 
 def stop_tree(proc: subprocess.Popen, timeout: float = 10) -> None:

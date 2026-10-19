@@ -128,8 +128,8 @@ for the chat, an agent CLI: `claude` (signed in) and optionally `codex`.
 Ports: UI 8288, API 8299, MCP 8281, PostgreSQL 55539 (override with `VERTICALS_DESKTOP_UI_PORT`,
 `..._API_PORT`, `..._MCP_PORT`, `..._PG_PORT`). State: `VERTICALS_DESKTOP_STATE`. Other names a browser uses for the UI:
 `VERTICALS_DESKTOP_HOSTS`, comma-separated with their port when it is not 80 (say `verticals.localhost` forwarded from
-port 80); the gateway answers no host it was not told. The services' log level: `VERTICALS_DESKTOP_LOG_LEVEL`. A database
-left running by a launcher that was killed is reused by the next start.
+port 80); the gateway answers no host it was not told. A database left running by a launcher that was killed is
+reused by the next start.
 
 ### Windows
 
@@ -144,9 +144,7 @@ python desktop/launcher.py mcp      # how to connect an agent to MCP
 
 PostgreSQL 16 is found as `tools/local.py` finds it (see the main README); Python 3.12 is also found through the `py`
 launcher. Closing the console window stops everything as Ctrl-C does. The API's and MCP server's output goes to `api.log`
-and `mcp.log` as on macOS and also to the console, each line marked `[api]` or `[mcp]`, at `info` (each request);
-`VERTICALS_DESKTOP_LOG_LEVEL=warning` keeps them as quiet as on macOS. A console with a selection in it pauses only the
-console, never the services. Claude's system prompt travels in a file (`--append-system-prompt-file`), because the
+and `mcp.log`, as on macOS. Claude's system prompt travels in a file (`--append-system-prompt-file`), because the
 morning report's prompt is close to Windows' 32,767-character command line. Opening a task's session in a terminal is
 macOS-only for now.
 
