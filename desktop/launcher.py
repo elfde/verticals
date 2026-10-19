@@ -129,8 +129,7 @@ def environment(cfg):
                # The shipped sample board belongs to the single-owner default, "local".
                VERTICALS_TOKEN=cfg["token"], VERTICALS_OWNER="local",
                VERTICALS_BIND=f"127.0.0.1:{API_PORT}", VERTICALS_MCP_BIND=f"127.0.0.1:{MCP_PORT}",
-               VERTICALS_POOL_MIN="1", VERTICALS_POOL_MAX="4",
-               VERTICALS_LOG_LEVEL=os.environ.get("VERTICALS_DESKTOP_LOG_LEVEL") or host.SERVICE_LOG_LEVEL,
+               VERTICALS_POOL_MIN="1", VERTICALS_POOL_MAX="4", VERTICALS_LOG_LEVEL="warning",
                # The Sources timer also asks Claude Code which of its MCP servers answer (docs/design/sources.md).
                VERTICALS_CONNECTIONS="claude", **host.SERVICE_ENV)
     if BUNDLED_PATH:

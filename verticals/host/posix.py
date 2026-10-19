@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 __all__ = [
-    "EXE", "PG_BIN_DIRS", "PG_HINT", "NPM", "SERVICE_ENV", "SERVICE_LOG_LEVEL", "KEEP_ENV", "NEW_GROUP", "BACKGROUND",
+    "EXE", "PG_BIN_DIRS", "PG_HINT", "NPM", "SERVICE_ENV", "KEEP_ENV", "NEW_GROUP", "BACKGROUND",
     "UVICORN_LOOP", "DROPPED_CONNECTION", "COMMAND_LINE_MAX",
     "venv_python", "python312", "port_free", "postgres_options", "pg_env", "spawn_service", "stop_tree", "kill_tree",
     "on_close", "ensure_utf8", "OutputReader",
@@ -36,7 +36,6 @@ def python312() -> str | None:
 # ---------------------------------------------------------------- services
 
 SERVICE_ENV: dict[str, str] = {}  # what every Python service started by a launcher is also given
-SERVICE_LOG_LEVEL = "warning"  # the desktop app shows no service output, so its services stay quiet
 KEEP_ENV: tuple[str, ...] = ()  # what a Sources command needs from the environment beyond the common list
 NEW_GROUP: dict[str, Any] = {"start_new_session": True}  # Popen arguments: a process group of its own
 BACKGROUND: dict[str, Any] = {}  # Popen arguments for a program that must not share this terminal
