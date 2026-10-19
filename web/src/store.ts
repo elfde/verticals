@@ -598,7 +598,7 @@ bindSpansDrag({
 
 // --- delete --------------------------------------------------------------------------------------
 
-const { removeGoal, removeSample } = createGoalDelete(state, reloadBoard) // `lib/goalDelete.ts`
+const { removeGoal, removeSample } = createGoalDelete(state, reloadBoard, () => closeGoal()) // `lib/goalDelete.ts`; `closeGoal` is made below
 
 // --- goal detail (S-104, D226) ----------------------------------------------------------------
 //

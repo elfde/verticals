@@ -8,7 +8,7 @@
 import { computed, reactive } from '../reactivity'
 import { ApiError, createGoal, deleteGoal, fetchUndated, patchGoal, reparentGoal, type InboxGoal } from './api'
 import { forgetStep, makeStep, record, type Step } from './boardHistory'
-import { createdStep } from './goalSteps'
+import { bindLift, createdStep } from './goalSteps'
 import { putBackWords } from './historyWords'
 import { agentChat, newThread, quietTurn, send } from './agentChat'
 import { isoDate } from './schedule'
@@ -31,6 +31,20 @@ export const inbox = reactive({
 })
 
 let epoch = 0
+
+/** A task deleted (from its window, or by Undo of the words you wrote) leaves the Inbox at once, with the tasks filed under
+ *  it, and comes back where it stood if the server refuses. A load that was on its way would bring it back, so it is dropped. */
+bindLift((id) => {
+  const gone = inbox.goals.filter((g) => g.id === id || g.parent?.id === id)
+  if (!gone.length) return null
+  epoch += 1
+  const before = inbox.goals
+  inbox.goals = inbox.goals.filter((g) => !gone.includes(g))
+  return () => {
+    inbox.goals = before
+  }
+})
+
 export async function loadInbox(): Promise<void> {
   const mine = ++epoch
   try {
