@@ -114,8 +114,6 @@ CHECK_PROMPT = load_check_prompt()
 # repository with this project's pyproject.toml and the desktop launcher in it.
 SOURCE_PLACES = ("verticals", "Verticals", "Developer/verticals", "Projects/verticals", "Code/verticals", "src/verticals",
                  "GitHub/verticals", "Documents/GitHub/verticals")
-# Where an agent keeps the skills it was given, by agent (Claude Code, the shared folder, Codex).
-SKILL_FOLDERS = (".claude/skills", ".agents/skills", ".codex/skills")
 
 
 def is_checkout(path):
@@ -148,10 +146,12 @@ def shaping_skills(home=None):
     """The names of the skills for shaping a change that this Mac's agents have, found by the word in their folder's name. The
     prompt names them only when they are there, so it never sends an agent to a skill it does not have."""
     home = Path(home) if home else Path.home()
+    folders = (Path(os.environ.get("CLAUDE_CONFIG_DIR") or home / ".claude"), home / ".agents",
+               Path(os.environ.get("CODEX_HOME") or home / ".codex"))
     found = set()
-    for folder in SKILL_FOLDERS:
+    for folder in folders:
         try:
-            found.update(p.name for p in (home / folder).iterdir() if "shaping" in p.name.lower() and (p / "SKILL.md").is_file())
+            found.update(p.name for p in (folder / "skills").iterdir() if "shaping" in p.name.lower() and (p / "SKILL.md").is_file())
         except OSError:
             continue
     return sorted(found)
@@ -1283,7 +1283,7 @@ class Chat:
             folder = self.state_dir / "open"
             folder.mkdir(mode=0o700, exist_ok=True)
             script = folder / f"claude-{entry['sessionId']}.command"
-            script.write_text(agent_sessions.terminal_script(action, which("claude")))
+            script.write_text(agent_sessions.terminal_script(action, which("claude"), os.environ.get("CLAUDE_CONFIG_DIR")))
             script.chmod(0o700)
             argv = [opener, "-a", "Terminal", str(script)]
         else:

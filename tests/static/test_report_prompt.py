@@ -32,14 +32,17 @@ def _checkout(path: Path, name: str = "verticals") -> Path:
     return path
 
 
-def _without_the_variable(chat, check):
-    """`check()` with VERTICALS_SOURCE out of the environment, and the environment as it was after."""
-    kept = os.environ.pop("VERTICALS_SOURCE", None)
+def _without_the_variable(chat, check, **env):
+    """`check()` with VERTICALS_SOURCE out of the environment and `env` in it, and the environment as it was after."""
+    kept = {name: os.environ.pop(name, None) for name in ("VERTICALS_SOURCE", *env)}
+    os.environ.update(env)
     try:
         return check()
     finally:
-        if kept is not None:
-            os.environ["VERTICALS_SOURCE"] = kept
+        for name, value in kept.items():
+            os.environ.pop(name, None)
+            if value is not None:
+                os.environ[name] = value
 
 
 def test_the_prompt_says_what_a_report_is_and_how_a_design_and_its_pull_request_go(scratch_dir: Path) -> None:
@@ -160,3 +163,15 @@ def test_shaping_skills_are_named_only_when_this_mac_has_them_and_the_agent_can_
     # Named for an agent with its own tools, in the words the skill folder gives; not for one that has no tools to use them with.
     assert "Use these skills for it: shaping, team-shaping." in prompt(True) and generic not in prompt(True)
     assert generic in prompt(False) and "team-shaping" not in prompt(False)
+
+
+def test_shaping_skills_come_from_the_folders_agents_env_picks(scratch_dir: Path) -> None:
+    """With `CLAUDE_CONFIG_DIR` and `CODEX_HOME` set, the agents' skills are in those folders, not in `~/.claude` and `~/.codex`."""
+    chat = _chat()
+    home, claude, codex = scratch_dir / "home", scratch_dir / "claude", scratch_dir / "codex"
+    for folder, name in ((home / ".claude", "work-shaping"), (home / ".agents", "shaping"), (claude, "team-shaping"),
+                         (codex, "codex-shaping")):
+        (folder / "skills" / name).mkdir(parents=True)
+        (folder / "skills" / name / "SKILL.md").write_text("---\nname: x\n---\n")
+    found = _without_the_variable(chat, lambda: chat.shaping_skills(home), CLAUDE_CONFIG_DIR=str(claude), CODEX_HOME=str(codex))
+    assert found == ["codex-shaping", "shaping", "team-shaping"]

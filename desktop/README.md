@@ -48,6 +48,12 @@ launcher has its own ports, database, state directory and UI build.
 
 The agent picker follows Enjoy's (strings, model artwork).
 
+## Page zoom
+
+View → Zoom In (⌘+, or ⌘=), Zoom Out (⌘−) and Actual Size (⌘0) change the page zoom, including while
+editing a task or writing in the chat. The browser-style steps range from 50% to 200% and use the
+same saved setting as the developer panel. The chosen scale survives a reload and the next launch.
+
 ## Reduce Motion
 
 View → Reduce Motion is a checkmark between Reload and Enter Full Screen. It starts as macOS's own Reduce motion
@@ -81,6 +87,24 @@ board and MCP are running, and has:
   Codex brings the window forward and opens that task (`board/#goal/<id>`); a link in the board's own page does the same.
 - Open at Login — a login item (`SMAppService`); at login Vertical starts in the menu bar only.
 - Quit Verticals — the only way, with ⌘Q, to stop the board and MCP.
+
+## Which account the agents use
+
+The app runs `claude` and `codex` as they are signed in by default (`~/.claude`, `~/.codex`). An app opened from Finder
+never sees your shell, so a `CLAUDE_CONFIG_DIR` or `CODEX_HOME` set there doesn't reach it. To give Vertical another
+sign-in, for example a personal account beside a work one, put the folder in `agents.env` in the state folder
+(`~/Library/Application Support/Verticals/agents.env`) and restart the app:
+
+```sh
+CLAUDE_CONFIG_DIR=~/.claude-personal
+CODEX_HOME=~/.codex-personal
+```
+
+Only these two variables are read, and only absolute paths (`~/` is your home folder). The chat, the morning report, the
+source checks, "Use Verticals in Claude Code" and "Use Verticals in Codex" in the menu bar, and a session opened in
+Terminal all use them. A folder that has never been signed in to needs one sign-in first:
+`CLAUDE_CONFIG_DIR=~/.claude-personal claude`, then `/login`. The ticks beside the two menu items belong to the app, not
+to an account: after a change to `agents.env`, click them again to connect the new folder.
 
 ## Run from the repository
 
