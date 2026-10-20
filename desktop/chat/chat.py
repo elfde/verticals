@@ -711,6 +711,8 @@ class CodexAgent:
         self.cwd = cwd or chat.workdir  # `rebuild_prompt` is Claude's: Codex is given its instructions at every thread/resume
         self.thread_id, self.turn_id = None, None
         self.approvals = {}      # request id -> [(label, response)]
+        self.pending_mcp = {}
+        self.reads = declared_reads(chat) if settings.get("sources") == CONNECTED else {}
         self.streamed = set()    # agentMessage item ids that got deltas
         # The conversation its calls belong to (docs/design/agent-answer-undo.md); a seat that is no conversation (the morning
         # report's second agent, morning_flow.py) has none, and its calls are nobody's answer.
@@ -748,6 +750,7 @@ class CodexAgent:
 
     def send(self, text):
         settings = self.settings = self.s.settings
+        self.pending_mcp.clear()
         params = {**codex_policy(codex_mode(settings), str(self.cwd)),
                   "serviceTier": "fast" if settings.get("fast") else None, "threadId": self.thread_id,
                   "input": [{"type": "text", "text": text, "text_elements": []}]}
@@ -799,6 +802,7 @@ class CodexAgent:
                         "input": {"changes": paths}})
                 s.emit({"t": "activity", "label": "Making changes…"})
             elif kind == "mcpToolCall":
+                self.pending_mcp[item.get("id")] = item
                 s.emit({"t": "tool", "id": item.get("id"), "name": item.get("tool", ""), "title": item.get("tool", ""),
                         "input": item.get("arguments") or {}})
                 s.emit({"t": "activity", "label": f"Using {item.get('tool', 'a tool')}"})
@@ -809,6 +813,7 @@ class CodexAgent:
                 s.emit({"t": "text_start"})
                 s.emit({"t": "text", "text": item["text"]})
             elif kind == "mcpToolCall":
+                self.pending_mcp.pop(item.get("id"), None)
                 result = item.get("result") or {}
                 failed = item.get("status") == "failed" or bool(item.get("error"))
                 s.emit({"t": "tool_result", "id": item.get("id"), "error": failed,
@@ -842,6 +847,18 @@ class CodexAgent:
                        ("Decline", {"permissions": {}, "scope": "turn"})]
             title = "Allow additional access?"
         elif method == "mcpServer/elicitation/request":
+            meta = p.get("_meta") or {}
+            candidates = [call for call in self.pending_mcp.values()
+                          if call.get("server") == p.get("serverName")
+                          and "tool_params" in meta and call.get("arguments") == meta["tool_params"]]
+            allowed = READ_TOOLS + (MORNING_WRITES if self.settings.get("role") != CHECKER else [])
+            morning_read = self.settings.get("sources") == CONNECTED and candidates and all(
+                (call.get("server") == "verticals_desktop" and call.get("tool") in allowed)
+                or f"mcp__{call.get('server')}__{call.get('tool')}" in self.reads for call in candidates)
+            full = self.settings.get("permission") == "full-access" and self.settings.get("role") != CHECKER
+            if (p.get("mode") == "form" and meta.get("codex_approval_kind") == "mcp_tool_call"
+                    and (full or morning_read)):
+                return self.proc.reply(rid, {"action": "accept", "content": {}, "_meta": None})
             options = [("Allow once", {"action": "accept", "content": {}, "_meta": None})]
             options += [("Allow for this session" if k == "session" else "Always allow",
                          {"action": "accept", "content": {}, "_meta": {"persist": k}})
