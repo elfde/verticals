@@ -398,7 +398,8 @@ def handle_doc_link(conn: psycopg.Connection, owner: str, args: dict[str, Any]) 
             inherited_from={"id": link.inherited_from.id, "title": link.inherited_from.title},
         )
 
-    label = doc.title or doc.path
+    # A bracket in the label would end it early: the link could not be found again to unlink or delete the document.
+    label = re.sub(r"[\[\]]", "", doc.title or "").strip() or doc.path
     new_body = _append_link_line(detail.goal.body, f"[{label}](doc:{doc.path})")
     core_goals.update(conn, owner=owner, id=goal_id, body=new_body)
     return ok(
