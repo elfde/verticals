@@ -88,7 +88,7 @@ export const Column = tracked(function Column(raw: Props & Record<string, unknow
     function onAdd(title: string) {
       if (!title.trim()) return
       playSound('add_goal_clicked')
-      void store.createGoalOn(props.vertical, title)
+      void store.createGoalOn(props.vertical, title, props.periodKey)
     }
 
     /* `active` is the one expanded column, toggled by a click on its header. Every column renders each goal's whole
