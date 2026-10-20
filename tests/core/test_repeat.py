@@ -385,3 +385,20 @@ def test_the_new_time_and_its_steps_keep_the_documents_their_notes_link(db: psyc
             (routine.id, "goal")
         ]
     assert {again, step.id} <= {link.goal_id for link in docs.links_for_doc(db, owner=OWNER, doc_id=routine.id)}
+
+
+def test_a_repeating_goal_cannot_move_to_life_and_ticking_it_makes_no_second_value(db: psycopg.Connection) -> None:
+    """Life has no next period, so a repeat cannot be set there (`validate_target`) or reach it by a move: a goal moved there
+    with its rule kept became a value whose tick made another value with the same title."""
+    review = _scheduled(db, "Weekly review")
+    goals.update(db, owner=OWNER, id=review.id, repeat={"frequency": "weekly"})
+
+    with pytest.raises(ValidationError) as refused:
+        moves.schedule(db, owner=OWNER, id=review.id, vertical="life", anchor_date=review.anchor_date)
+    assert refused.value.detail["field"] == "repeat"
+    stays = goals.goal(db, owner=OWNER, id=review.id).goal
+    assert (stays.vertical, stays.repeat_rule) == ("day", {"frequency": "weekly", "interval": 1})
+
+    goals.update(db, owner=OWNER, id=review.id, repeat=None)
+    moved = moves.schedule(db, owner=OWNER, id=review.id, vertical="life", anchor_date=review.anchor_date).goal
+    assert moved.vertical == "life", "with its repeat cleared it moves as any goal"
