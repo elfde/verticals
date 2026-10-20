@@ -654,7 +654,7 @@ export const SearchBar = tracked(function SearchBar(raw: Props & Record<string, 
               <path d="M12 21.5V3M12 3 5 10M12 3l7 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          {words ? (
+          {words && state === 'answer' ? (
             <div
               className={cx('circle-field__answer', [`circle-field__answer--${words.kind}`, { 'circle-field__answer--chips': answerChips.length }])}
               data-role="circle-answer"
