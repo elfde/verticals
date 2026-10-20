@@ -7,7 +7,7 @@ ancestors. Its title and colour stay steady while the person writes in the conve
 Changes to the task itself still update the window and its blurred copies. Opening the chat,
 closing it and switching between a task and a document keep their existing transitions.
 
-## Verification and remaining check
+## Verification
 
 The regression test drives the real UI and gateway with synthetic data. It covers parent and
 child title matches, unrelated text, deletion, paste, cursor movement and a newline; window
@@ -18,18 +18,20 @@ Chromium and Playwright WebKit recordings cover a green task with a document bes
 normal motion and a narrower window with reduced motion and the dark system preference.
 The current UI retains its light surface under that preference.
 
-A separate native WKWebView loaded the same production bundle and captured 131 snapshots
-while changing the draft. One snapshot showed a different blurred layer; the other differences
-were at most one colour-channel level. This has not been established as a visible screen
-flicker: capturing the actual native window failed (`could not create image from window`).
-The installed application was not changed. Native visual acceptance remains open; this change
-removes the demonstrated search-triggered repaint but is not proof that every compositor
-flicker is resolved.
+A native WKWebView loaded the production bundle and captured 45 actual window screenshots
+while changing the draft, including pauses, paste and deletion. The background card region
+was pixel-identical in every capture. The beginning, middle and end were inspected visually.
+This resolves the earlier snapshot-only anomaly: one of 131 WebKit snapshots had differed,
+but that did not establish a visible screen flicker.
+
+The combined package passed an isolated upgrade check, preserving all rows and the schema.
+Acceptance in the owner's installed app awaits the macOS Documents permission requested
+after the local package was signed. No claim is made that every possible compositor issue
+is covered by the demonstrated typing scenario.
 
 Synthetic evidence: [before](../screenshots/stable-card-typing/before.png),
 [after](../screenshots/stable-card-typing/after.png),
-[native normal](../screenshots/stable-card-typing/native-normal.png),
-[native anomalous snapshot](../screenshots/stable-card-typing/native-anomaly.png).
+[native window screenshot](../screenshots/stable-card-typing/native-screen.png).
 
 An additional probe found that an external API rename does not refresh the already-open task
 window through the board change feed. The current live-board reload fetches board rows, not
