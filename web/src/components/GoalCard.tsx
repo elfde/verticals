@@ -95,8 +95,9 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
   const s = useSetup(props, (props) => {
     const checked = computed(() => props.done)
     const blurred = computed(() => props.searchPeriod === undefined && !props.searchOpen && isPrivate(props.id))
-    const titleParts = computed(() => highlightTitle(props.title))
-    const filterContext = computed(() => isContextGoal(props.id))
+    const titleParts = computed(() => props.columnVertical === 'window'
+      ? [{ text: props.title, match: false }] : highlightTitle(props.title))
+    const filterContext = computed(() => props.columnVertical !== 'window' && isContextGoal(props.id))
     const cardStyle = computed(() => {
       const palette = devPaletteFor(props.color)
       // flow 4: the family's faint and farthest tints, found from this colour (lib/familyView.ts)
