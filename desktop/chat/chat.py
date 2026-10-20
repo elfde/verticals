@@ -642,8 +642,8 @@ def codex_instructions(settings, state_dir=None):
 PROXY_ENV = ["VERTICALS_MCP_URL", "VERTICALS_MCP_TOKEN", "VERTICALS_MCP_SESSION"]
 
 
-def codex_args(chat):
-    """Keep the user's CLI sign-in, but expose only this desktop's MCP server.
+def codex_args(chat, reads=None):
+    """Expose the desktop and, for morning turns, approved source readers.
 
     CLI overrides merge tables; setting mcp_servers={} neither removes inherited servers
     nor clears an existing HTTP transport when a stdio command is added under its name.
@@ -657,10 +657,26 @@ def codex_args(chat):
     servers = config.get("mcp_servers", {})
     if "verticals_desktop" in servers:
         raise ChatError("Codex configuration already uses the reserved verticals_desktop server name")
+    source_tools = {}
+    for tool in reads or ():
+        match = TOOL_NAME.fullmatch(tool)
+        if match and not match.group(1).lower().startswith("verticals"):
+            name, method = match.groups()
+            if name in servers and servers[name].get("enabled", True):
+                source_tools.setdefault(name, set()).add(method)
+    key = lambda name: name if re.fullmatch(r"[A-Za-z0-9_-]+", name) else q(name)
     overrides = []
     for group in ("mcp_servers", "plugins"):
         for name in config.get(group, {}):
-            overrides += ["-c", f"{group}.{name}.enabled=false"]
+            if group == "mcp_servers" and name in source_tools:
+                prefix = f"mcp_servers.{key(name)}"
+                overrides += ["-c", f"{prefix}.enabled=true",
+                              "-c", f"{prefix}.enabled_tools={q(sorted(source_tools[name]))}",
+                              "-c", f'{prefix}.default_tools_approval_mode="prompt"']
+                for method in sorted(source_tools[name]):
+                    overrides += ["-c", f'{prefix}.tools.{key(method)}.approval_mode="approve"']
+            else:
+                overrides += ["-c", f"{group}.{key(name)}.enabled=false"]
     for event, handlers in config.get("hooks", {}).items():
         if isinstance(handlers, list):
             overrides += ["-c", f"hooks.{event}=[]"]
@@ -680,8 +696,8 @@ def codex_args(chat):
         enabled = {s["name"] for s in json.loads(result.stdout) if s.get("enabled", True)}
     except (ValueError, KeyError, TypeError):
         enabled = set()
-    if result.returncode or enabled != {"verticals_desktop"}:
-        raise ChatError("Could not isolate Codex to the local Verticals desktop MCP server")
+    if result.returncode or enabled != {"verticals_desktop", *source_tools}:
+        raise ChatError("Could not isolate Codex to Verticals and its approved source readers")
     return [which("codex"), "app-server", *overrides]
 
 
@@ -701,7 +717,8 @@ class CodexAgent:
         conversation = getattr(s, "id", None)
         env = child_env({"VERTICALS_MCP_URL": chat.mcp_url, "VERTICALS_MCP_TOKEN": chat.token,
                          **({"VERTICALS_MCP_SESSION": conversation} if conversation else {})})
-        self.proc = RpcProcess(codex_args(chat), self.cwd, env, self.notify, self.request, self.exited)
+        args = (codex_args(chat, declared_reads(chat)) if settings.get("sources") == CONNECTED else codex_args(chat))
+        self.proc = RpcProcess(args, self.cwd, env, self.notify, self.request, self.exited)
         self.proc.request("initialize", {"clientInfo": {"name": "verticals-desktop", "title": "Verticals", "version": "0.1.0"},
                                          "capabilities": {"experimentalApi": True}})
         self.proc.notify("initialized", {})
