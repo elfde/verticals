@@ -126,7 +126,8 @@ export const AgentConversation = tracked(function AgentConversation({ onLink, ..
                   {chips.length ? <AgentChips className="agent-balloon__chips" links={chips} /> : null}
                   {/* At the answer's end, under what it made (docs/design/agent-answer-undo.md, agent-chips.md). */}
                   {balloon.who === 'agent' && balloon.answer ? <AnswerUndo answer={balloon.answer} stays /> : null}
-                  {ask ? (
+                  {/* Only an ask still waiting: once answered it goes, as the earlier ones of the turn did. */}
+                  {ask && !ask.done ? (
                     <div className="agent-balloon__ask" data-role="agent-ask">
                       <p className={cx('agent-balloon__ask-title', { 'agent-balloon__ask-title--changes': change })}>{ask.title}</p>
                       {change ? (
@@ -145,8 +146,7 @@ export const AgentConversation = tracked(function AgentConversation({ onLink, ..
                           <button
                             key={option.value}
                             type="button"
-                            className={cx('agent-balloon__choice', { 'is-chosen': ask.chosen === option.value })}
-                            disabled={ask.done}
+                            className="agent-balloon__choice"
                             onClick={() => void decide(ask.requestId, option.value)}
                           >
                             {option.label}

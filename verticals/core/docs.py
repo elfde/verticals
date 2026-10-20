@@ -23,10 +23,11 @@ multi-statement body wraps itself in `with conn.transaction()` (a SAVEPOINT when
 already has one open, same as `core/tree.py`/`core/evidence.py`). `owner` is keyword-only with no
 default on every function, matching every sibling `core/` module.
 
-`core/goals.py` calls exactly one function here — `rewrite_goal_links`, from inside `update()`,
-only when a body was actually written — and this module never imports `core/goals.py` back: one
-direction, no cycle, the same rule `core/field_rules.py`'s own docstring states for its own split
-from `goals.py`.
+`core/goals.py` calls exactly one function here — `rewrite_goal_links`, from `create()` and
+`update()`, only when a body was actually written; `core/repeat.py` calls it for the next
+occurrence and its step copies — and this module never imports either back: one direction, no
+cycle, the same rule `core/field_rules.py`'s own docstring states for its own split from
+`goals.py`.
 """
 
 from __future__ import annotations
@@ -229,8 +230,8 @@ def _rewrite_doc_links(conn: psycopg.Connection, *, owner: str, doc_id: str, bod
 
 
 def rewrite_goal_links(conn: psycopg.Connection, *, owner: str, goal_id: str, body: str) -> None:
-    """The goal-side mirror of `_rewrite_doc_links`, public because `core/goals.py::update` is
-    the one caller outside this module (the module docstring's "surgical touch"). A doc path the
+    """The goal-side mirror of `_rewrite_doc_links`, public because `core/goals.py` and
+    `core/repeat.py` write goal bodies (the module docstring's "surgical touch"). A doc path the
     text names that does not resolve for this owner is silently skipped, same reasoning as the
     doc side reversed."""
     owner = _validate_owner(owner)

@@ -9,6 +9,7 @@ import { ProgressiveBlur } from './ProgressiveBlur'
 import { GoalWindowBody } from './GoalWindowBody'
 import { PageWindowBody } from './PageWindowBody'
 import { DocWindowBody } from './DocWindowBody'
+import { DocDeleteButton } from './DocDeleteButton'
 import { agentChat } from '../lib/agentChat'
 import { closeWindow, closeWindows, focusWindow, stepWindow, windows, type VtWindow } from '../lib/windows'
 import { goalLight } from '../lib/look'
@@ -88,17 +89,22 @@ export const WindowStack = tracked(function WindowStack(attrs: Record<string, un
     /* A two-finger swipe moves one window, when the window under it can't scroll that way (S3.P3.010, .025). */
     let swiped = 0
     let swipeAt = 0
+    let swipeUsed = false
     function onWheel(event: WheelEvent): void {
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
       const body = (event.target as HTMLElement).closest<HTMLElement>('.vt-window__body, .doc-window, .page-window')
       if (body && body.scrollWidth > body.clientWidth) return
       const now = performance.now()
-      if (now - swipeAt > 300) swiped = 0
+      if (now - swipeAt > 300) {
+        swiped = 0
+        swipeUsed = false
+      }
       swipeAt = now
+      if (swipeUsed) return
       swiped += event.deltaX
       if (Math.abs(swiped) < 60) return
       stepWindow(swiped > 0 ? 1 : -1)
-      swiped = -Math.sign(swiped) * 1000
+      swipeUsed = true
     }
 
     /* A document's head: its facts, then its versions, which open history in Documents. */
@@ -235,6 +241,7 @@ export const WindowStack = tracked(function WindowStack(attrs: Record<string, un
                           </Fragment>
                         ))}
                       </p>
+                      <DocDeleteButton id={win.target} />
                     </>
                   ) : (
                     <h2 className="vt-window__name" title={win.title}>{win.title}</h2>

@@ -62,6 +62,7 @@ const CIRCLE = 84
 const STEP_WIDTH = 360
 /* The open field's caption has 32 px on each side. */
 const PAD_CAPTION = 32
+const OPEN_WIDTH = 272
 /* A message bringing chips is the balloon in the field: the words 376 px wide, two lines of them, 32 px in from the sides,
    then the chips with 14 px between (the balloon's own), three at most and "N more" for the rest. */
 const CHIPS_PAD = 32
@@ -174,8 +175,14 @@ export const SearchBar = tracked(function SearchBar(raw: Props & Record<string, 
       // In the Inbox the card waiting above the field, carried out again, is held the same way (docs/design/inbox-carry-stack.md).
       || (state.value === 'moving' && (store.state.drag.id !== null || dots.landing || carry.item !== null)))
 
-    /* Open, the field is as wide as its caption (round 9: "size of the field should align with the text"). */
-    const openWidth = computed(() => Math.min(maxWidth.value, Math.ceil(PAD_CAPTION + textWidth(circleCaption.value) + PAD_CAPTION)))
+    /* The caption that was there blurs out while the new one comes in. */
+    const captionLeaving = ref<string | null>(null)
+    watch(circleCaption, (_, old) => { captionLeaving.value = old ?? null })
+    watch(text, (words) => { if (words) captionLeaving.value = null })
+
+    /* Open, the field is as wide as "Write to inbox" at least, and wider only for a longer caption. */
+    const openWidth = computed(() => Math.min(maxWidth.value,
+      Math.max(OPEN_WIDTH, Math.ceil(PAD_CAPTION + textWidth(circleCaption.value) + PAD_CAPTION))))
 
     const baseWidth = computed(() => {
       if (carry.over) return 120
@@ -555,7 +562,7 @@ export const SearchBar = tracked(function SearchBar(raw: Props & Record<string, 
       body, shape, surface, line, input, mirror, pivot, answerMeasure, leadMeasure, chipsBox, flying, still, lines, state,
       hovered, answerChips, shownChips, moreChips, undoable, answerText, answerSays, leadText, changesText, stopping,
       stepShown, holding, width, shownLines, height, stepShift, tagsShown, lineMode, measure, moved, send, onShapeMove,
-      onTagsEnter, onLeave, onShapeClick,
+      onTagsEnter, onLeave, onShapeClick, captionLeaving,
     }
   })
 
@@ -630,7 +637,11 @@ export const SearchBar = tracked(function SearchBar(raw: Props & Record<string, 
               onBlur={() => { circle.focused = false }}
             ></textarea>
             <div ref={bindRef(s.mirror)} className="circle-field__mirror" aria-hidden="true"></div>
-            {!text ? <span className="circle-field__caption" aria-hidden="true">{circleCaption.value}</span> : null}
+            {!text && s.captionLeaving.value ? (
+              <span key={`out:${s.captionLeaving.value}`} className="circle-field__caption circle-field__caption--out" aria-hidden="true"
+                onAnimationEnd={() => { s.captionLeaving.value = null }}>{s.captionLeaving.value}</span>
+            ) : null}
+            {!text ? <span key={circleCaption.value} className="circle-field__caption" aria-hidden="true">{circleCaption.value}</span> : null}
           </div>
           <button
             type="button"

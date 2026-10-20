@@ -101,6 +101,15 @@
   font: 400 28px/36px var(--font-body);
   white-space: nowrap;
   pointer-events: none;
+  /* A new caption comes in out of a blur: keyed by its words, it is drawn again on each change. */
+  animation: circle-caption-in 220ms var(--vt-ease-small) both;
+}
+@keyframes circle-caption-in {
+  from { opacity: 0; filter: blur(6px); }
+}
+.circle-field__caption--out { animation-name: circle-caption-out; }
+@keyframes circle-caption-out {
+  to { opacity: 0; filter: blur(6px); }
 }
 .circle-field__send {
   position: absolute;
@@ -306,8 +315,12 @@
   .circle-field__words { transition: opacity var(--vt-crossfade) linear; }
   .circle-field[data-state='answer'] .circle-field__shape { transition: width var(--vt-crossfade) linear, height var(--vt-crossfade) linear; }
   .circle-field__answer { animation-duration: var(--vt-crossfade); animation-delay: 0ms; }
+  .circle-field__caption { animation: circle-caption-fade var(--vt-crossfade) linear both; }
+  .circle-field__caption--out { animation-name: circle-caption-fade-out; }
   .circle-field__line.is-blinking, .circle-field__pivot.is-turning, .circle-field__answer-caret { animation: none; }
 }
 
 /* Holding a card carried in the Inbox (lib/inboxCarry.ts): the pill takes it, with the mascot and no words. */
 .circle-field[data-holding] .circle-field__words { opacity: 0; }
+@keyframes circle-caption-fade { from { opacity: 0; } }
+@keyframes circle-caption-fade-out { to { opacity: 0; } }

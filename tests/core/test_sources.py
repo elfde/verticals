@@ -168,6 +168,21 @@ def test_a_source_with_no_check_or_an_unreadable_one_or_no_answer_yet_is_grey(db
     assert (core.view(fresh, T0).why, core.due(fresh, T0)) == (core.NEW, True)
 
 
+def test_an_address_that_does_not_parse_is_one_unreadable_source_not_a_broken_list(db: psycopg.Connection) -> None:
+    """A document is edited by hand too, so its address can be anything: one that `urlsplit` cannot read is that source's
+    error, and the other sources are listed and checked as before."""
+    healthy = _source(db, "mail", NAME)
+    broken = core_docs.create(db, owner=OWNER, path="sources/status.md", title="Status",
+                              body="```check\n{\"kind\": \"http\", \"url\": \"http://[::1\"}\n```").doc
+
+    listed = {s.id: s for s in core.sources(db, owner=OWNER)}
+
+    assert listed[healthy.id].check is not None
+    unreadable = core.view(listed[broken.id], T0)
+    assert (unreadable.status, unreadable.why) == (GREY, core.UNREADABLE)
+    assert "invalid host" in unreadable.error
+
+
 # --- approval --------------------------------------------------------------------------------------------------------
 
 

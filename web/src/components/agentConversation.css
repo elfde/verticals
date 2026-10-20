@@ -85,8 +85,6 @@
   font: 500 14px/20px var(--font-body);
   cursor: pointer;
 }
-.agent-balloon__choice:disabled { opacity: .4; cursor: default; }
-.agent-balloon__choice.is-chosen { opacity: 1; }
 .agent-balloon__choice:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .agent-conversation-enter-active { transition: clip-path var(--vt-dur-rise) var(--vt-ease-large), opacity var(--vt-dur-rise) linear; }
 .agent-conversation-leave-active { transition: clip-path var(--vt-dur-fade) var(--vt-ease-large), opacity var(--vt-dur-fade) linear; }

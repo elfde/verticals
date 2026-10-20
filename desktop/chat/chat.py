@@ -125,7 +125,7 @@ def is_checkout(path):
         return False
 
 
-def find_source(state_dir=None, home=None, code_root=None):
+def find_source(state_dir=None, home=None, code_root=None, explicit_only=False):
     """A checkout of Verticals' source on this Mac, or None. The agent that makes a change and opens its pull request needs
     one; the installed app ships without. In this order: the person's word for it, `VERTICALS_SOURCE` or `source` in the app's
     config.json (nothing else of that file is read); the repository this code runs from, when it runs from a checkout; the
@@ -138,7 +138,8 @@ def find_source(state_dir=None, home=None, code_root=None):
     except (OSError, ValueError):
         pass
     candidates = [Path(n).expanduser() for n in named if isinstance(n, str) and n.strip()]
-    candidates += [Path(code_root) if code_root else HERE.parents[1], *(home / place for place in SOURCE_PLACES)]
+    if not explicit_only:
+        candidates += [Path(code_root) if code_root else HERE.parents[1], *(home / place for place in SOURCE_PLACES)]
     return next((c for c in candidates if is_checkout(c)), None)
 
 
@@ -234,7 +235,7 @@ ENV_KEEP = {"CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BED
 # the answer in a file, and a seat with no file tools cannot open it.
 MCP_OUTPUT_TOKENS = "100000"
 READ_TOOLS = ["board", "goal", "outline", "search", "evidence_due", "tags", "size_report",
-              "doc_get", "doc_tree", "doc_history", "doc_revision", "comments",
+              "doc_get", "doc_image", "doc_tree", "doc_history", "doc_revision", "comments",
               "privacy", "sources"]
 
 # Agent descriptors: labels and details are Enjoy's own (see its provider registry).
@@ -684,7 +685,7 @@ def codex_args(chat):
     for event, handlers in config.get("hooks", {}).items():
         if isinstance(handlers, list):
             overrides += ["-c", f"hooks.{event}=[]"]
-    overrides += ["-c", "notify=[]", "-c", "features.apps=false", "-c", "features.shell_tool=false",
+    overrides += ["-c", "notify=[]", "-c", "features.apps=false", "-c", "features.shell_tool=true",
                   "-c", "features.multi_agent=false", "-c", 'web_search="disabled"',
                   "-c", f"mcp_servers.verticals_desktop.command={q(sys.executable)}",
                   "-c", f"mcp_servers.verticals_desktop.args={q([str(HERE / 'mcp_proxy.py')])}",
@@ -727,7 +728,8 @@ class CodexAgent:
         self.proc.notify("initialized", {})
         params = {**codex_policy(codex_mode(settings)), "cwd": str(self.cwd),
                   "developerInstructions": codex_instructions(settings, chat.state_dir),
-                  "config": {"sandbox_workspace_write.network_access": False, "features.multi_agent": False},
+                  "config": {"sandbox_workspace_write.network_access": False, "features.multi_agent": False,
+                             "features.shell_tool": settings.get("sources") != CONNECTED},
                   "serviceTier": "fast" if settings.get("fast") else None}
         if settings.get("model"):
             params["model"] = settings["model"]
@@ -1017,9 +1019,10 @@ class Chat:
         self.answers_url = mcp_url.removesuffix("/mcp")
         for stale in state_dir.glob("chat-mcp*.json"):
             stale.unlink(missing_ok=True)
-        # The agents' working directory: empty, writable, outside the app bundle.
+        # A writable default outside the app; an explicitly selected checkout replaces it.
         self.workdir = state_dir / "chat-workspace"
         self.workdir.mkdir(exist_ok=True)
+        self.workdir = find_source(state_dir, explicit_only=True) or self.workdir
         every = float(os.environ.get("VERTICALS_WATCH_SECONDS", WATCH_SECONDS)) if watch_every is None else watch_every
         if every > 0:
             threading.Thread(target=self._watch, args=(every,), daemon=True).start()
@@ -1499,6 +1502,8 @@ class Chat:
                 # The session lives in the folder it began in; one that began outside Verticals keeps the system prompt it
                 # recorded unless Claude is told to build it again.
                 folder = Path(stored["cwd"]) if resume and stored.get("cwd") and Path(stored["cwd"]).is_dir() else self.workdir
+                if folder == self.state_dir / "chat-workspace":
+                    folder = self.workdir
                 agent = AGENT_CLASSES[provider](self, s, settings, resume, cwd=folder,
                                                 rebuild_prompt=bool(resume and stored.get("external")))
                 s.agent, fresh = agent, resume is None

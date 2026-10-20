@@ -130,7 +130,7 @@ const state = reactive<State>({
   goalDetail: null,
   goalDetailLoading: false,
   hasOpenedGoal: false,
-  collapsed: [],
+  collapsed: viewState.readCollapsed(),
   expandedVertical: null,
   hoverChainId: null,
   restChainId: null,
@@ -400,9 +400,18 @@ async function createGoalOn(verticalBucket: string, title: string): Promise<stri
  *  wants (`{vertical, anchor_date}`, never a computed `period_key`, AC-010). Popover scheduling
  *  retains its broad reload. Drag scheduling already names a visible destination, so it moves the
  *  local row before the request and reconciles from the returned card without a board refetch. */
-/** A period's start day for the schedule write: a span's own, or the schedule grid's (docs/design-handoff S5.P6.003). */
+/** A period's day for the schedule write: a span's own start (docs/design-handoff S5.P6.003), or the schedule grid's. The grid
+ *  knows only the periods around today; a column of a board paged further takes the board's own date, which lies inside
+ *  every column's period (`createGoalOn`). */
 function anchorFor(scale: VerticalScale, periodKey: string): string {
-  return spanAnchor(scale, periodKey) ?? scheduleGrid.value.anchorDate(scale, periodKey)
+  const span = spanAnchor(scale, periodKey)
+  if (span) return span
+  const grid = scheduleGrid.value
+  const board = state.board
+  if (!grid.knows(scale, periodKey) && board?.columns.some((c) => c.vertical === scale && c.period_key === periodKey)) {
+    return board.anchor_date
+  }
+  return grid.anchorDate(scale, periodKey)
 }
 
 async function scheduleGoalTo(
