@@ -825,6 +825,10 @@ class CodexAgent:
                        ("Decline", {"permissions": {}, "scope": "turn"})]
             title = "Allow additional access?"
         elif method == "mcpServer/elicitation/request":
+            if (self.settings.get("permission") == "full-access" and self.settings.get("role") != CHECKER
+                    and p.get("mode") == "form"
+                    and (p.get("_meta") or {}).get("codex_approval_kind") == "mcp_tool_call"):
+                return self.proc.reply(rid, {"action": "accept", "content": {}, "_meta": None})
             options = [("Allow once", {"action": "accept", "content": {}, "_meta": None})]
             options += [("Allow for this session" if k == "session" else "Always allow",
                          {"action": "accept", "content": {}, "_meta": {"persist": k}})
