@@ -70,6 +70,14 @@ For the report skill, set the reader's timezone, report destination, available s
 and optional cadence in the owner's local workspace instructions; see its
 `references/setup.md`. No personal path, account, or schedule is baked into the pack.
 
+Codex morning turns expose the reading tools named by approved sources on configured
+MCP servers. Other servers and plugins remain disabled; ordinary board conversations
+still expose only the desktop connection. A server disabled in the owner's Codex
+configuration stays disabled. New source approvals take effect on the next morning
+agent launch.
+Source documents show their check and Approve button both in a window and at a direct
+document address, without visiting the Inbox first.
+
 ## Verification
 
 Run `npm --prefix web run typecheck` and `npm --prefix web run build`.
