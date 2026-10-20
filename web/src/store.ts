@@ -341,16 +341,17 @@ function bumpAncestorProgress(id: string, delta: number): void {
  *  "the period containing that anchor date" (`core/board.py`). `verticalBucket` is `Column.tsx`'s
  *  own `vertical` prop, which already carries the literal `"maybe"` string for that column
  *  (`toColumnData` above) — so the caller never needs to special-case which column it is. */
-async function createGoalOn(verticalBucket: string, title: string): Promise<string | null> {
+async function createGoalOn(verticalBucket: string, title: string, periodKey: string | null = null): Promise<string | null> {
   const trimmed = title.trim()
   if (!trimmed) return null
   const payload =
     verticalBucket === 'maybe'
       ? { title: trimmed }
-      : { title: trimmed, vertical: verticalBucket, anchor_date: state.board?.anchor_date ?? todayIso() }
+      : { title: trimmed, vertical: verticalBucket,
+          anchor_date: periodKey ? anchorFor(verticalBucket as VerticalScale, periodKey) : state.board?.anchor_date ?? todayIso() }
   // A filtered board leaves a new top goal out, so it shows only on the unfiltered board, as before.
-  const placement = state.valueFilter ? null : createPlacement(() => state.board, {
-    title: trimmed, vertical: payload.vertical ?? null, anchorDate: payload.anchor_date ?? null,
+  const placement = state.valueFilter ? null : createPlacement(() => withSpans(state.board), {
+    title: trimmed, vertical: payload.vertical ?? null, anchorDate: payload.anchor_date ?? null, periodKey,
   })
   try {
     const created = await createGoal(payload)
