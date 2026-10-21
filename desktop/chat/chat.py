@@ -1245,7 +1245,11 @@ class Chat:
             self.moved[key] = stat
             now_seen, seen = {"size": stat[0], "mtime": stat[1]}, entry.get("seen") or {}
             live = self.sessions.get(key)
-            driven = bool(live and live.running) or now - (entry.get("lastTurnAt") or 0) < agent_sessions.DRIVEN_GRACE
+            # Verticals' own last act on it: the end of a turn it ran, or the moment it closed the agent, whose CLI writes its last
+            # lines as it exits. Lines written then are its own, also when the gateway that looks is a new one (close_agent).
+            own = max(entry.get("lastTurnAt") or 0, entry.get("closedAt") or 0)
+            driven = bool(live and live.running) or now - own < agent_sessions.DRIVEN_GRACE \
+                or stat[1] - own < agent_sessions.DRIVEN_GRACE
             if driven or not seen or stat[0] < seen.get("size", 0):
                 # Its own writes, a first sight or a file that was replaced: this is the new reference.
                 if seen != now_seen:
@@ -1524,8 +1528,7 @@ class Chat:
             went_on = bool(stored.get("outside")) and not changed_provider
             if agent and (agent.provider != provider or went_on
                           or agent.signature() != AGENT_CLASSES[provider].signature_of(settings)):
-                s.agent = None
-                agent.close()
+                self.close_agent(s)
                 agent = None
             if agent is None:
                 resume = None if changed_provider else stored.get("sessionId")
@@ -1600,8 +1603,19 @@ class Chat:
         if s and s.flow is not None:
             s.flow.abandon()
         if s and s.agent:
-            s.agent.close()
+            self.close_agent(s)
         (self.state_dir / f"chat-mcp-{id}.json").unlink(missing_ok=True)
+
+    def close_agent(self, s):
+        """Ends a conversation's agent. Its CLI writes its last lines to the session's file as it exits (Claude's cost and last
+        prompt), so the moment it is closed is kept with the conversation: the watcher takes that write for Verticals' own and
+        not for the owner going on in Claude or Codex, also after the app starts again (look)."""
+        agent, s.agent = s.agent, None
+        if agent is None:
+            return
+        agent.close()
+        if s.id in self.load():
+            self.update(s.id, closedAt=time.time())
 
     def shutdown(self):
         self.stopping.set()
@@ -1610,7 +1624,7 @@ class Chat:
             if s.flow is not None:
                 s.flow.abandon()
             if s.agent:
-                s.agent.close()
+                self.close_agent(s)
         for config in self.state_dir.glob("chat-mcp*.json"):
             config.unlink(missing_ok=True)
         self.log.info("gateway stop")
