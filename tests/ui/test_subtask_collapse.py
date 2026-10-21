@@ -53,7 +53,7 @@ def test_subtasks_can_be_hidden_and_shown_without_changing_the_family(ui_f2: UiS
     expect(page.locator(f'.goal-card[data-goal-id="{child}"]')).to_be_visible()
 
 
-def test_hidden_subtasks_stay_hidden_on_reload_and_leave_notes_accessible(ui_f2: UiSession) -> None:
+def test_hidden_subtasks_stay_hidden_on_reload_and_show_in_the_open_task(ui_f2: UiSession) -> None:
     parent, child = _family(ui_f2)
     page = ui_f2.page
     _toggle(page, parent, expanded=True).click()
@@ -61,10 +61,22 @@ def test_hidden_subtasks_stay_hidden_on_reload_and_leave_notes_accessible(ui_f2:
     activate_column(page, "month")
     card = page.locator(f'.goal-card[data-goal-id="{parent}"]').first
     expect(_toggle(page, parent, expanded=False)).to_be_visible()
+    expect(page.locator(f'.goal-card[data-goal-id="{child}"]')).not_to_be_visible()
     card.locator('.goal-card__title').click()
     expect(page.locator('#goal-detail')).to_contain_text('SYN notes remain available.')
+    expect(page.locator(f'.goal-card[data-goal-id="{child}"]')).to_be_visible()
+    expect(page.locator(f'[data-subtasks-of="{parent}"]')).to_have_count(0)
+    page.keyboard.press('Escape')
+    expect(page.locator('#goal-detail')).to_have_count(0)
     expect(page.locator(f'.goal-card[data-goal-id="{child}"]')).not_to_be_visible()
     _toggle(page, parent, expanded=False).click()
     expect(page.locator(f'.goal-card[data-goal-id="{child}"]')).to_be_visible()
     _below(_toggle(page, parent, expanded=True), page.locator(f'.goal-card[data-goal-id="{child}"]').first)
-    expect(page.locator('#goal-detail')).to_contain_text('SYN notes remain available.')
+
+
+def test_toggle_is_set_at_its_steps_size(ui_f2: UiSession) -> None:
+    parent, child = _family(ui_f2)
+    page = ui_f2.page
+    size = "el => getComputedStyle(el).fontSize + '/' + getComputedStyle(el).lineHeight"
+    step = page.locator(f'.goal-card[data-goal-id="{child}"] .goal-card__title-text').first
+    assert _toggle(page, parent, expanded=True).evaluate(size) == step.evaluate(size)

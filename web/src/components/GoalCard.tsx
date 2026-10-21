@@ -287,7 +287,7 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
 
     /** Column's `renderItems`, over this card's own children (`insertBeforeId: null` appends). */
     function renderChildren(): ChildRenderItem[] {
-      if (store.isCollapsed(props.id) && !isPathLine.value) return []
+      if (store.isCollapsed(props.id) && !isPathLine.value && !isInlineDetailHost.value) return []
       const items: ChildRenderItem[] = listKids.value.map((goal) => ({ kind: 'goal', key: goal.id, goal }))
       if (!isNestedReorderHere.value) return items
       const beforeId = dragSlot.value?.insertBeforeId ?? null
@@ -337,7 +337,6 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
 
     /** "Add…" at the end of an open goal's steps: the new step lives where its parent does, so it shows at once. */
     function onAddStep(title: string): void {
-      if (store.isCollapsed(props.id)) store.toggleCollapsed(props.id)
       void store.addDetailChild(title)
     }
     function onCardEnter(): void {
@@ -453,10 +452,11 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
   const showChildren = s.showChildren.value
   const isNestedSourceSlot = s.isNestedSourceSlot.value
   const css = !familyMovingNow.value
+  /* An open task always shows its steps, so it offers neither: it was opened to see them. Closed, a shown list ends
+     with its Hide and a hidden one leaves its Show under the title; a key press moves the focus over to the other one,
+     which the press just put on screen. */
   const collapsed = store.isCollapsed(id)
-  const hasSteps = props.children.length > 0 && !isPathLine
-  /* Shown, the list ends with its Hide; hidden, its Show stands under the title. A key press moves the focus over to
-     the other one, which the press just put on screen. */
+  const hasSteps = props.children.length > 0 && !isPathLine && !isInlineDetailHost
   function toggleSubtasks(event: { stopPropagation(): void, detail: number }): void {
     event.stopPropagation()
     store.toggleCollapsed(id)
