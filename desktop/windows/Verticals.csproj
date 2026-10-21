@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Verticals.exe: a native window (WebView2) around desktop/launcher.py, the Windows counterpart of desktop/macos.
+       .NET Framework 4.8 ships with Windows 10 (1903 and later) and Windows 11, so the app needs no .NET to be installed.
+       Build: dotnet build desktop/windows -c Release  (see desktop/README.md, Windows). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>Verticals</AssemblyName>
+    <RootNamespace>Verticals</RootNamespace>
+    <Product>Verticals</Product>
+    <Version>0.2</Version>
+    <ApplicationIcon>icon\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <!-- The exe, its WebView2 libraries and WebView2Loader.dll in one folder, next to nothing else. -->
+    <OutputPath>..\dist\windows\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <WebView2LoaderPreference>Dynamic</WebView2LoaderPreference>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <EmbeddedResource Include="icon\AppIcon.ico" LogicalName="AppIcon.ico" />
+  </ItemGroup>
+</Project>

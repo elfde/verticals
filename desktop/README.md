@@ -45,6 +45,9 @@ launcher has its own ports, database, state directory and UI build.
   that connect Claude Code and Codex, no window in it, checked by `tests/static/test_app_links.py`), `Updater.swift` (checks,
   downloads and installs updates), `UpdateIndicator.swift` (the Update button in the title bar) and `bundle.py`
   (self-contained `Verticals.app` + `.dmg`).
+- `windows/` — `Verticals.exe` for Windows (see Windows below): `MainWindow.cs` (the window, WebView2, and the tray icon
+  with its menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin of `AppLinks.swift`), `Agents.cs`
+  (runs `claude` and `codex`) and `Program.cs` (one copy at a time, links, Open at Login). No updates or installer yet.
 
 The agent picker follows Enjoy's (strings, model artwork).
 
@@ -139,14 +142,39 @@ reused by the next start.
 
 ### Windows
 
-There is no app to build: the same `launcher.py` starts the services, the gateway and the chat, and the board opens in a
-browser. What differs between the systems lives in `verticals/host/` (`posix.py`, `windows.py`), never in the launcher.
+The same `launcher.py` starts the services, the gateway and the chat. What differs between the systems lives in
+`verticals/host/` (`posix.py`, `windows.py`), never in the launcher. Run it in a terminal and open the board in a browser:
 
 ```powershell
 npm --prefix web ci                 # once (or python tools/local.py setup)
 python desktop/launcher.py          # UI: http://127.0.0.1:8288/ (builds desktop/build/web on first run)
 python desktop/launcher.py mcp      # how to connect an agent to MCP
 ```
+
+Or build the app, `Verticals.exe`: the Windows counterpart of `Verticals.app`, in `windows/` (C#, Windows Forms and
+WebView2 on .NET Framework 4.8, which Windows 10 and 11 already have). It needs the .NET SDK to build, nothing to run:
+
+```powershell
+dotnet build desktop/windows -c Release    # -> desktop/dist/windows/Verticals.exe
+```
+
+For now it runs from the repository: it finds `desktop/launcher.py` in a folder above itself and starts it with the
+repository's `.venv`, else `VERTICALS_PYTHON`, else `py -3.12`. What it does, as on a Mac:
+
+- One window with the board (WebView2, Microsoft Edge's engine, part of Windows 11 and of nearly every Windows 10; where it
+  is missing, the window says so and links its installer, and the board and MCP start anyway). The frame and the page
+  follow Windows' light or dark app mode. Ctrl+plus, Ctrl+minus and Ctrl+0 zoom the page, and the zoom is kept.
+- Closing the window keeps the board, the API and MCP running behind the tray icon, the mascot, faint while the board is
+  not up. A click on it opens the window; its menu says whether the board and MCP are running and has Use Verticals in
+  Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`),
+  Open at Login (`HKCU\…\Run`, starting in the tray only) and Quit Verticals, which stops everything as Ctrl-C does.
+- `verticals://goal/<id>` links open the task in the window: the app registers the scheme for the user at each start.
+- One copy runs at a time. `Verticals.exe --quit` quits the running one and returns once it has stopped.
+
+Data lives in `%LOCALAPPDATA%\Verticals` (`--state-dir <path>` or `VERTICALS_DESKTOP_STATE` elsewhere), with `app.log`
+there; the window's place and zoom in `HKCU\Software\Verticals`. The launcher's `VERTICALS_DESKTOP_*` variables, set as user
+environment variables, move its ports and hosts, and the app follows the UI port. The icon is `windows/icon/AppIcon.ico`,
+drawn from the macOS icon by `windows/icon/make_icon.py`.
 
 PostgreSQL 16 is found as `tools/local.py` finds it (see the main README); Python 3.12 is also found through the `py`
 launcher. Closing the console window stops everything as Ctrl-C does. The API's and MCP server's output goes to `api.log`
