@@ -1042,3 +1042,14 @@ body[data-family-moving] .pattern-vertical-board__column[data-family-lane]
 }
 .goal-card__subtasks-toggle:hover { color: #111; }
 .goal-card__subtasks-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* At the list's end, "Hide" stands on its steps' words (their row's 6 px pad, the stack's inset, a checkbox and its gap). */
+.goal-card__subtasks-toggle.goal-card__subtasks-toggle--end {
+  align-self: flex-start;
+  margin: 0 0 0 calc(6px + var(--space-2) + var(--kkov-collapsed-subtask-checkbox-size)
+    + var(--kkov-collapsed-subtask-checkbox-text-gap));
+  text-align: left;
+}
+.pattern-vertical-board__column--active .goal-card__subtasks-toggle.goal-card__subtasks-toggle--end {
+  margin-left: calc(6px + var(--space-2) + var(--kkov-expanded-subtask-checkbox-size)
+    + var(--kkov-expanded-subtask-checkbox-text-gap));
+}
