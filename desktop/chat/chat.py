@@ -663,8 +663,8 @@ def codex_instructions(settings, state_dir=None):
 PROXY_ENV = ["VERTICALS_MCP_URL", "VERTICALS_MCP_TOKEN", "VERTICALS_MCP_SESSION"]
 
 
-def codex_args(chat):
-    """Keep the user's CLI sign-in, but expose only this desktop's MCP server.
+def codex_args(chat, reads=None):
+    """Expose the desktop and, for morning turns, approved source readers.
 
     CLI overrides merge tables; setting mcp_servers={} neither removes inherited servers
     nor clears an existing HTTP transport when a stdio command is added under its name.
@@ -678,10 +678,26 @@ def codex_args(chat):
     servers = config.get("mcp_servers", {})
     if "verticals_desktop" in servers:
         raise ChatError("Codex configuration already uses the reserved verticals_desktop server name")
+    source_tools = {}
+    for tool in reads or ():
+        match = TOOL_NAME.fullmatch(tool)
+        if match and not match.group(1).lower().startswith("verticals"):
+            name, method = match.groups()
+            if name in servers and servers[name].get("enabled", True):
+                source_tools.setdefault(name, set()).add(method)
+    key = lambda name: name if re.fullmatch(r"[A-Za-z0-9_-]+", name) else q(name)
     overrides = []
     for group in ("mcp_servers", "plugins"):
         for name in config.get(group, {}):
-            overrides += ["-c", f"{group}.{name}.enabled=false"]
+            if group == "mcp_servers" and name in source_tools:
+                prefix = f"mcp_servers.{key(name)}"
+                overrides += ["-c", f"{prefix}.enabled=true",
+                              "-c", f"{prefix}.enabled_tools={q(sorted(source_tools[name]))}",
+                              "-c", f'{prefix}.default_tools_approval_mode="prompt"']
+                for method in sorted(source_tools[name]):
+                    overrides += ["-c", f'{prefix}.tools.{key(method)}.approval_mode="approve"']
+            else:
+                overrides += ["-c", f"{group}.{key(name)}.enabled=false"]
     for event, handlers in config.get("hooks", {}).items():
         if isinstance(handlers, list):
             overrides += ["-c", f"hooks.{event}=[]"]
@@ -701,8 +717,8 @@ def codex_args(chat):
         enabled = {s["name"] for s in json.loads(result.stdout) if s.get("enabled", True)}
     except (ValueError, KeyError, TypeError):
         enabled = set()
-    if result.returncode or enabled != {"verticals_desktop"}:
-        raise ChatError("Could not isolate Codex to the local Verticals desktop MCP server")
+    if result.returncode or enabled != {"verticals_desktop", *source_tools}:
+        raise ChatError("Could not isolate Codex to Verticals and its approved source readers")
     return [which("codex"), "app-server", *overrides]
 
 
@@ -716,13 +732,16 @@ class CodexAgent:
         self.cwd = cwd or chat.workdir  # `rebuild_prompt` is Claude's: Codex is given its instructions at every thread/resume
         self.thread_id, self.turn_id = None, None
         self.approvals = {}      # request id -> [(label, response)]
+        self.pending_mcp = {}
+        self.reads = declared_reads(chat) if settings.get("sources") == CONNECTED else {}
         self.streamed = set()    # agentMessage item ids that got deltas
         # The conversation its calls belong to (docs/design/agent-answer-undo.md); a seat that is no conversation (the morning
         # report's second agent, morning_flow.py) has none, and its calls are nobody's answer.
         conversation = getattr(s, "id", None)
         env = child_env({"VERTICALS_MCP_URL": chat.mcp_url, "VERTICALS_MCP_TOKEN": chat.token,
                          **({"VERTICALS_MCP_SESSION": conversation} if conversation else {})})
-        self.proc = RpcProcess(codex_args(chat), self.cwd, env, self.notify, self.request, self.exited)
+        args = (codex_args(chat, declared_reads(chat)) if settings.get("sources") == CONNECTED else codex_args(chat))
+        self.proc = RpcProcess(args, self.cwd, env, self.notify, self.request, self.exited)
         self.proc.request("initialize", {"clientInfo": {"name": "verticals-desktop", "title": "Verticals", "version": "0.1.0"},
                                          "capabilities": {"experimentalApi": True}})
         self.proc.notify("initialized", {})
@@ -752,6 +771,7 @@ class CodexAgent:
 
     def send(self, text):
         settings = self.settings = self.s.settings
+        self.pending_mcp.clear()
         params = {**codex_policy(codex_mode(settings), str(self.cwd)),
                   "serviceTier": "fast" if settings.get("fast") else None, "threadId": self.thread_id,
                   "input": [{"type": "text", "text": text, "text_elements": []}]}
@@ -803,6 +823,7 @@ class CodexAgent:
                         "input": {"changes": paths}})
                 s.emit({"t": "activity", "label": "Making changes…"})
             elif kind == "mcpToolCall":
+                self.pending_mcp[item.get("id")] = item
                 s.emit({"t": "tool", "id": item.get("id"), "name": item.get("tool", ""), "title": item.get("tool", ""),
                         "input": item.get("arguments") or {}})
                 s.emit({"t": "activity", "label": f"Using {item.get('tool', 'a tool')}"})
@@ -813,6 +834,7 @@ class CodexAgent:
                 s.emit({"t": "text_start"})
                 s.emit({"t": "text", "text": item["text"]})
             elif kind == "mcpToolCall":
+                self.pending_mcp.pop(item.get("id"), None)
                 result = item.get("result") or {}
                 failed = item.get("status") == "failed" or bool(item.get("error"))
                 s.emit({"t": "tool_result", "id": item.get("id"), "error": failed,
@@ -846,6 +868,18 @@ class CodexAgent:
                        ("Decline", {"permissions": {}, "scope": "turn"})]
             title = "Allow additional access?"
         elif method == "mcpServer/elicitation/request":
+            meta = p.get("_meta") or {}
+            candidates = [call for call in self.pending_mcp.values()
+                          if call.get("server") == p.get("serverName")
+                          and "tool_params" in meta and call.get("arguments") == meta["tool_params"]]
+            allowed = READ_TOOLS + (MORNING_WRITES if self.settings.get("role") != CHECKER else [])
+            morning_read = self.settings.get("sources") == CONNECTED and candidates and all(
+                (call.get("server") == "verticals_desktop" and call.get("tool") in allowed)
+                or f"mcp__{call.get('server')}__{call.get('tool')}" in self.reads for call in candidates)
+            full = self.settings.get("permission") == "full-access" and self.settings.get("role") != CHECKER
+            if (p.get("mode") == "form" and meta.get("codex_approval_kind") == "mcp_tool_call"
+                    and (full or morning_read)):
+                return self.proc.reply(rid, {"action": "accept", "content": {}, "_meta": None})
             options = [("Allow once", {"action": "accept", "content": {}, "_meta": None})]
             options += [("Allow for this session" if k == "session" else "Always allow",
                          {"action": "accept", "content": {}, "_meta": {"persist": k}})

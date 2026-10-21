@@ -91,8 +91,8 @@ def _validate_positive_int(value: object, field: str, *, minimum: int) -> int:
 
 
 def validate_path(value: object) -> str:
-    """Relative, `/`-separated, every segment non-empty and not `.`/`..`, no whitespace or
-    control characters in any segment, must end `.md`, at most `MAX_PATH_CHARS` characters
+    """Relative, `/`-separated, every segment non-empty and not `.`/`..`, no whitespace,
+    control characters or `)` in any segment, must end `.md`, at most `MAX_PATH_CHARS` characters
     total. `path` is the doc's whole identity (unique per owner) — refused shapes are refused
     before any statement runs, same as every other `core/` validator."""
     if not isinstance(value, str) or not value:
@@ -118,6 +118,9 @@ def validate_path(value: object) -> str:
             raise ValidationError(
                 "path segments must carry no whitespace and no control characters", field="path"
             )
+        # A link's destination ends at the first `)` (`_LINK_DEST_RE`): a path holding one could never be linked.
+        if ")" in segment:
+            raise ValidationError("path segments must carry no ')'", field="path")
     if not value.endswith(".md"):
         raise ValidationError("path must end with '.md'", field="path")
     return value
