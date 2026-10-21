@@ -169,11 +169,13 @@ repository's `.venv`, else `VERTICALS_PYTHON`, else `py -3.12`. What it does, as
   Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`),
   Open at Login (`HKCU\…\Run`, starting in the tray only) and Quit Verticals, which stops everything as Ctrl-C does.
 - `verticals://goal/<id>` links open the task in the window: the app registers the scheme for the user at each start.
-- One copy runs at a time. `Verticals.exe --quit` quits the running one and returns once it has stopped.
+- One copy runs at a time: another start (the taskbar, the Start menu, a shortcut) brings the running one's window back,
+  from the tray too. `Verticals.exe --quit` quits the running one and returns once it has stopped.
 
 Data lives in `%LOCALAPPDATA%\Verticals` (`--state-dir <path>` or `VERTICALS_DESKTOP_STATE` elsewhere), with `app.log`
 there; the window's place and zoom in `HKCU\Software\Verticals`. The launcher's `VERTICALS_DESKTOP_*` variables, set as user
-environment variables, move its ports and hosts, and the app follows the UI port. The icon is `windows/icon/AppIcon.ico`,
+environment variables, move its ports and hosts, and the app follows the UI port; it reads them from the user's settings
+when a start from the taskbar has not got them yet (Explorer learns new ones at the next sign-in). The icon is `windows/icon/AppIcon.ico`,
 drawn from the macOS icon by `windows/icon/make_icon.py`.
 
 PostgreSQL 16 is found as `tools/local.py` finds it (see the main README); Python 3.12 is also found through the `py`
