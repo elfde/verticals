@@ -294,10 +294,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
                     }
                 }
             }
-            updater.installOnQuit(relaunch: relaunching, hidden: !window.isVisible)
+            if updater.readyToInstall {
+                updater.installOnQuit(relaunch: relaunching, hidden: !window.isVisible)
+            } else if relaunching {
+                reopenAfterQuit(hidden: !window.isVisible)
+            }
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
+    }
+
+    // With an update downloaded this is the title bar's Restart.
+    @objc func restart(_ sender: Any?) {
+        if updater.readyToInstall {
+            if !updater.state.restart { restartToUpdate() }
+            return
+        }
+        relaunching = true
+        NSApp.terminate(nil)
+    }
+
+    // Waits for this process, then its launcher and PostgreSQL (a minute between them), so the new launcher finds its
+    // ports free. A test run's -StateDir goes along.
+    func reopenAfterQuit(hidden: Bool) {
+        var args = UserDefaults.standard.string(forKey: "StateDir").map { ["-StateDir", $0] } ?? []
+        if hidden { args += ["-StartHidden", "YES"] }
+        let opener = Process()
+        opener.executableURL = URL(fileURLWithPath: "/bin/sh")
+        opener.arguments = ["-c", """
+            while kill -0 "$1" 2>/dev/null; do sleep 0.2; done
+            pg=$(head -n 1 "$3/postgres/postmaster.pid" 2>/dev/null); waited=0
+            for pid in "$2" "$pg"; do
+                while [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && [ $waited -lt 300 ]; do sleep 0.2; waited=$((waited + 1)); done
+            done
+            app=$4; shift 4; exec /usr/bin/open "$app" "$@"
+            """, "reopen", String(getpid()), backend.map { String($0.processIdentifier) } ?? "", stateDir.path,
+            Bundle.main.bundleURL.path] + (args.isEmpty ? [] : ["--args"] + args)
+        try? opener.run()
     }
 
     // Edits still waiting out their debounce reach the API before it stops; a restart reopens this page.
@@ -398,6 +431,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         menu.addItem(login)
         menu.addItem(.separator())
         menu.addItem(item("Check for Updates…", #selector(checkForUpdatesNow(_:))))
+        menu.addItem(item("Restart Verticals", #selector(restart(_:))))
         menu.addItem(item("Quit Verticals", #selector(NSApplication.terminate(_:))))
     }
 
@@ -655,6 +689,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         app.addItem(.separator())
         app.addItem(item("Hide Verticals", #selector(NSApplication.hide(_:)), "h"))
         app.addItem(.separator())
+        let restartItem = item("Restart Verticals", #selector(restart(_:)), "")
+        restartItem.target = self
+        app.addItem(restartItem)
         app.addItem(item("Quit Verticals", #selector(NSApplication.terminate(_:)), "q"))
         let edit = NSMenu(title: "Edit")
         edit.addItem(item("Undo", Selector(("undo:")), "z"))
