@@ -7,15 +7,15 @@
   :root {
     --color-bg: #1c1c1e;
     --color-bg-muted: #242426;
-    --color-text: #f5f5f7;
-    --color-text-muted: rgb(245 245 247 / 65%);
-    --color-text-subtle: rgb(245 245 247 / 45%);
+    --color-text: #d0d0d4;
+    --color-text-muted: rgb(208 208 212 / 65%);
+    --color-text-subtle: rgb(208 208 212 / 45%);
     --color-surface-overlay: rgb(255 255 255 / 6%);
     --color-surface-strong: rgb(255 255 255 / 10%);
     --color-border: rgb(255 255 255 / 12%);
     --color-border-strong: rgb(255 255 255 / 24%);
-    --vt-text-rgb: 245 245 247;
-    --vt-foreground-rgb: 237 237 240;
+    --vt-text-rgb: 208 208 212;
+    --vt-foreground-rgb: 208 208 212;
     --vt-surface-rgb: 28 28 30;
     --vt-desk-rgb: 20 20 22;
     --vt-desk-bg: #141416;

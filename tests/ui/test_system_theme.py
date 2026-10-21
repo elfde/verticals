@@ -88,6 +88,7 @@ def test_initial_board_uses_system_appearance(ui_f2: UiSession, system_scheme, w
         _dark_surface(page, "body")
         _dark_surface(page, ".app-shell")
         _dark_surface(page, ".goal-card")
+        assert max(_channels(_rgb(page, ".goal-card__title", "color"))[:3]) <= 220
     else:
         assert _rgb(page, ".app-shell") == "rgb(255, 255, 255)"
     assert _contrast(page, ".goal-card__title", ".goal-card") >= 4.5
@@ -143,6 +144,8 @@ def test_documents_and_inbox_follow_live_changes(ui_f2: UiSession):
     expect(page.locator(".doc-detail__title")).to_have_text("SYN Night notes")
     _dark_surface(page, ".vt-window[data-window='doc']")
     assert _contrast(page, ".doc-detail__title", ".vt-window[data-window='doc']") >= 4.5
+    assert max(_channels(_rgb(page, ".doc-detail__body p", "color"))[:3]) <= 220
+    assert _contrast(page, ".doc-detail__body p", ".vt-window[data-window='doc']") >= 4.5
     _shot(page, "document-dark")
     page.locator(".doc-detail__body mark.comment-highlight").click()
     tick(page)
