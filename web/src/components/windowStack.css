@@ -22,8 +22,8 @@
    window's. A goal or a page stays a card that hugs what it holds: a sheet is a document, a card is a goal. */
 .vt-window--full {
   --vt-foot-ramp: 48px;
-  --vt-foot-solid: calc(24px + var(--vt-field-height, 84px) + 12px + var(--vt-tags-lift, 0px));
-  --vt-foot: calc(24px + 84px + 12px + var(--vt-foot-ramp));
+  --vt-foot-solid: calc(var(--vt-field-bottom) + var(--vt-field-height, 84px) + 12px + var(--vt-tags-lift, 0px));
+  --vt-foot: calc(var(--vt-field-bottom) + 84px + 12px + var(--vt-foot-ramp));
   top: .5px;
   bottom: .5px;
   max-height: none;
