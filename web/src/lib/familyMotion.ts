@@ -71,9 +71,10 @@ interface Seen {
 }
 
 const ROW = '.goal-card[data-goal-id]'
-// The open card's parts, and what else stands in the column and moves with its scroll: its name and the carried box's
-// header line and "N more" (the box's ground holds rows, so it can't glide by a transform of its own).
-const PARTS = '.goal-card__add-step, #goal-detail, .goal-facts, .column-now-line, .column-add-row, '
+// The open card's parts, a list's own Hide, and what else stands in the column and moves with its scroll: its name and
+// the carried box's header line and "N more" (the box's ground holds rows, so it can't glide by a transform of its own).
+const PARTS = '.goal-card__add-step, .goal-card__subtasks-toggle--end, #goal-detail, .goal-facts, .column-now-line, '
+  + '.column-add-row, '
   + '.pattern-vertical-board__header, .carried-group__head, .carried-group__more'
 
 function ownerOf(el: HTMLElement): string {
@@ -85,6 +86,7 @@ function ownerOf(el: HTMLElement): string {
 function keyOf(el: HTMLElement): string {
   if (el.matches(ROW)) return `row:${el.dataset.rowKey ?? el.dataset.goalId}` // one goal may stand twice in a column
   if (el.matches('.goal-card__add-step')) return `add:${ownerOf(el)}`
+  if (el.matches('.goal-card__subtasks-toggle--end')) return `hide:${ownerOf(el)}`
   if (el.id === 'goal-detail') return `notes:${ownerOf(el)}`
   if (el.matches('.goal-facts')) return `facts:${ownerOf(el)}`
   if (el.matches('.pattern-vertical-board__header')) return 'header'
