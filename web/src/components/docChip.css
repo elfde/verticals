@@ -17,8 +17,8 @@
     box-shadow: 0 0 0 .5px rgb(16 18 32 / 5%), 0 1px 3px rgb(16 18 32 / 4%), 0 8px 22px -12px rgb(16 18 32 / 14%); }
 }
 .doc-chip:focus-visible { outline: 2px solid #007aff; outline-offset: 2px; }
-/* In a message: on the balloon's black, no ground of its own, the words white. */
-.doc-chip--dark { padding: 0; box-shadow: none; color: var(--color-bg); cursor: pointer; }
+/* In a message: on the balloon's black, no ground of its own, the words light. */
+.doc-chip--dark { padding: 0; box-shadow: none; color: var(--vt-on-black, #fff); cursor: pointer; }
 .doc-chip--dark .doc-chip__page > .doc-page { box-shadow: none; }
-.doc-chip--dark .doc-chip__when { color: rgb(var(--vt-surface-rgb, 255 255 255) / 50%); }
+.doc-chip--dark .doc-chip__when { color: var(--vt-on-black-muted, rgb(255 255 255 / 50%)); }
 @media (prefers-reduced-motion: reduce) { .doc-chip { transition: none; } }

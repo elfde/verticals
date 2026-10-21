@@ -8,6 +8,7 @@ from playwright.sync_api import expect
 
 from tests.ui.conftest import UiSession, activate_column, _backend, _static_server, _make_ui_session
 from tests.ui.views import open_page, switch_view, tick
+from tests.ui.test_agent_conversation import ui_agent  # noqa: F401
 from verticals.core import comments, docs, goals
 
 
@@ -193,3 +194,38 @@ def test_every_value_color_keeps_hovered_task_text_readable(ui_f2: UiSession):
         foreground = _channels(card.locator(".goal-card__title").first.evaluate("el => getComputedStyle(el).color"))
         assert _contrast_colors(foreground, background) >= 4.5, (goal_id, surface)
     _shot(page, "value-colors-dark")
+
+
+def test_document_links_stay_readable_on_black_answers_and_messages(ui_agent: UiSession):
+    from tests.ui.test_agent_conversation import _send
+    from tests.ui.views import FIELD
+
+    with psycopg.connect(ui_agent.backend.dsn, autocommit=True) as conn:
+        doc_id = docs.create(conn, owner='t1', path='syn-theme/answer.md', title='SYN Linked notes',
+                             body='Synthetic document linked by the agent.').doc.id
+    page = ui_agent.page
+    page.wait_for_selector('.goal-card__row')
+    _send(page, f'[slow] [say] Your notes are ready. [SYN Linked notes](#doc/{doc_id})')
+    page.locator('[data-role="out-of-focus"]').click(position={'x':60,'y':60})
+    chip = page.locator(f'.circle-field__answer-chips [data-doc-id="{doc_id}"]')
+    expect(chip).to_be_visible(timeout=10000)
+    for scheme in ('light','dark'):
+        page.emulate_media(color_scheme=scheme)
+        for part in ('.doc-chip__name','.doc-chip__when'):
+            assert _contrast(page, f'.circle-field__answer-chips {part}', '.circle-field__surface') >= 4.5
+        if scheme == 'dark':
+            assert max(_channels(_rgb(page, '.circle-field__answer-words','color'))[:3]) <= 220
+        _shot(page,f'document-answer-{scheme}')
+    page.locator('.circle-field__answer-words').click()
+    message = '[data-balloon][data-who="agent"]'
+    expect(page.locator(f'{message} [data-doc-id="{doc_id}"]')).to_be_visible()
+    for scheme in ('light','dark'):
+        page.emulate_media(color_scheme=scheme)
+        for part in ('.doc-chip__name','.doc-chip__when'):
+            assert _contrast(page, f'{message} {part}', message) >= 4.5
+        if scheme == 'dark':
+            assert max(_channels(_rgb(page, message,'color'))[:3]) <= 220
+        _shot(page,f'document-message-{scheme}')
+    page.keyboard.press('Control+k')
+    page.locator(FIELD).fill('SYN softer draft')
+    assert max(_channels(_rgb(page, FIELD,'color'))[:3]) <= 220

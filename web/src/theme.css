@@ -1,6 +1,8 @@
 :root {
   color-scheme: light dark;
   --vt-goal-wash: 100%;
+  --vt-on-black: #fff;
+  --vt-on-black-muted: rgb(255 255 255 / 50%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -8,6 +10,8 @@
     --color-bg: #1c1c1e;
     --color-bg-muted: #242426;
     --color-text: #d0d0d4;
+    --vt-on-black: var(--color-text);
+    --vt-on-black-muted: rgb(208 208 212 / 65%);
     --color-text-muted: rgb(208 208 212 / 65%);
     --color-text-subtle: rgb(208 208 212 / 45%);
     --color-surface-overlay: rgb(255 255 255 / 6%);
