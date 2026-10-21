@@ -1028,17 +1028,36 @@ body[data-family-moving] .pattern-vertical-board__column[data-family-lane]
 }
 .goal-card--private .goal-card__text > :not(.goal-card__title) > *,
 .goal-card__children--private > .goal-detail-root > * { opacity: 0; }
+/* Show and Hide are set at their steps' size, in the narrow column and the wide one alike, and in the grey of "Add…",
+   the list's other control. */
 .goal-card__subtasks-toggle {
   display: block;
   margin: 4px 0 0;
-  padding: 2px 0;
+  padding: 0;
   border: 0;
   background: none;
-  color: #555;
+  color: rgba(45, 48, 54, .52);
   font: inherit;
-  font-size: 12px;
-  line-height: 18px;
+  font-size: var(--kkov-collapsed-subtask-font-size);
+  line-height: var(--kkov-collapsed-subtask-line-height);
   cursor: pointer;
 }
-.goal-card__subtasks-toggle:hover { color: #111; }
+.pattern-vertical-board__column--active .goal-card__subtasks-toggle {
+  font-size: var(--kkov-expanded-subtask-font-size);
+  line-height: var(--kkov-expanded-subtask-line-height);
+}
+.goal-card__subtasks-toggle:hover { color: rgba(45, 48, 54, .8); }
 .goal-card__subtasks-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* At the list's end, "Hide" stands on its steps' words (their row's 6 px pad, the stack's inset, a checkbox and its gap). */
+.goal-card__subtasks-toggle.goal-card__subtasks-toggle--end {
+  align-self: flex-start;
+  margin: 0 0 0 calc(6px + var(--space-2) + var(--kkov-collapsed-subtask-checkbox-size)
+    + var(--kkov-collapsed-subtask-checkbox-text-gap));
+  text-align: left;
+}
+/* The wide column's steps stand 2 px further apart than the list's own gap (measured: 28 px a step, 26 to Hide). */
+.pattern-vertical-board__column--active .goal-card__subtasks-toggle.goal-card__subtasks-toggle--end {
+  margin-top: 2px;
+  margin-left: calc(6px + var(--space-2) + var(--kkov-expanded-subtask-checkbox-size)
+    + var(--kkov-expanded-subtask-checkbox-text-gap));
+}

@@ -287,7 +287,7 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
 
     /** Column's `renderItems`, over this card's own children (`insertBeforeId: null` appends). */
     function renderChildren(): ChildRenderItem[] {
-      if (store.isCollapsed(props.id) && !isPathLine.value) return []
+      if (store.isCollapsed(props.id) && !isPathLine.value && !isInlineDetailHost.value) return []
       const items: ChildRenderItem[] = listKids.value.map((goal) => ({ kind: 'goal', key: goal.id, goal }))
       if (!isNestedReorderHere.value) return items
       const beforeId = dragSlot.value?.insertBeforeId ?? null
@@ -337,7 +337,6 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
 
     /** "Add…" at the end of an open goal's steps: the new step lives where its parent does, so it shows at once. */
     function onAddStep(title: string): void {
-      if (store.isCollapsed(props.id)) store.toggleCollapsed(props.id)
       void store.addDetailChild(title)
     }
     function onCardEnter(): void {
@@ -453,6 +452,19 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
   const showChildren = s.showChildren.value
   const isNestedSourceSlot = s.isNestedSourceSlot.value
   const css = !familyMovingNow.value
+  /* An open task always shows its steps, so it offers neither: it was opened to see them. Closed, a shown list ends
+     with its Hide and a hidden one leaves its Show under the title; a key press moves the focus over to the other one,
+     which the press just put on screen. */
+  const collapsed = store.isCollapsed(id)
+  const hasSteps = props.children.length > 0 && !isPathLine && !isInlineDetailHost
+  function toggleSubtasks(event: { stopPropagation(): void, detail: number }): void {
+    event.stopPropagation()
+    store.toggleCollapsed(id)
+    if (event.detail !== 0) return
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(`[data-subtasks-of="${CSS.escape(id)}"][aria-expanded="${collapsed}"]`)?.focus()
+    })
+  }
 
   return (
     <>
@@ -583,14 +595,15 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
               >Open</button>
             ) : null}
             {contextLabel ? <p className="goal-card__meta">{contextLabel}</p> : null}
-            {props.children.length > 0 && !isPathLine && (showChildren || store.isCollapsed(id)) ? (
+            {hasSteps && collapsed ? (
               <button
                 type="button"
                 className="goal-card__subtasks-toggle"
                 data-role="subtasks-toggle"
-                aria-expanded={!store.isCollapsed(id)}
-                onClick={(event) => { event.stopPropagation(); store.toggleCollapsed(id) }}
-              >{store.isCollapsed(id) ? 'Show' : 'Hide'} {props.children.length} {props.children.length === 1 ? 'subtask' : 'subtasks'}</button>
+                data-subtasks-of={id}
+                aria-expanded="false"
+                onClick={toggleSubtasks}
+              >Show {props.children.length} {props.children.length === 1 ? 'subtask' : 'subtasks'}</button>
             ) : null}
             <Transition name="goal-part" css={css}>{isInlineDetailHost ? <GoalFacts id={id} /> : null}</Transition>
           </div>
@@ -700,6 +713,16 @@ export const GoalCard: MemoExoticComponent<(props: Props) => ReactNode> = tracke
             <Transition name="goal-part" css={css}>
               {isInlineDetailHost ? <SubgoalAddRow className="goal-card__add-step" commitOnEnter onCommit={s.onAddStep} /> : null}
             </Transition>
+            {hasSteps && !collapsed ? (
+              <button
+                type="button"
+                className="goal-card__subtasks-toggle goal-card__subtasks-toggle--end"
+                data-role="subtasks-toggle"
+                data-subtasks-of={id}
+                aria-expanded="true"
+                onClick={toggleSubtasks}
+              >Hide {props.children.length === 1 ? 'subtask' : 'subtasks'}</button>
+            ) : null}
             <Transition name="goal-notes" css={css}>{isInlineDetailHost ? <GoalDetail /> : null}</Transition>
           </div>
         ) : null}
