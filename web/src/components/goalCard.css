@@ -1028,14 +1028,15 @@ body[data-family-moving] .pattern-vertical-board__column[data-family-lane]
 }
 .goal-card--private .goal-card__text > :not(.goal-card__title) > *,
 .goal-card__children--private > .goal-detail-root > * { opacity: 0; }
-/* Show and Hide are set at their steps' size, in the narrow column and the wide one alike. */
+/* Show and Hide are set at their steps' size, in the narrow column and the wide one alike, and in the grey of "Add…",
+   the list's other control. */
 .goal-card__subtasks-toggle {
   display: block;
   margin: 4px 0 0;
   padding: 0;
   border: 0;
   background: none;
-  color: #555;
+  color: rgba(45, 48, 54, .52);
   font: inherit;
   font-size: var(--kkov-collapsed-subtask-font-size);
   line-height: var(--kkov-collapsed-subtask-line-height);
@@ -1045,7 +1046,7 @@ body[data-family-moving] .pattern-vertical-board__column[data-family-lane]
   font-size: var(--kkov-expanded-subtask-font-size);
   line-height: var(--kkov-expanded-subtask-line-height);
 }
-.goal-card__subtasks-toggle:hover { color: #111; }
+.goal-card__subtasks-toggle:hover { color: rgba(45, 48, 54, .8); }
 .goal-card__subtasks-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 /* At the list's end, "Hide" stands on its steps' words (their row's 6 px pad, the stack's inset, a checkbox and its gap). */
 .goal-card__subtasks-toggle.goal-card__subtasks-toggle--end {
