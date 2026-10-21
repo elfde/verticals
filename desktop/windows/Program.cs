@@ -27,7 +27,9 @@ namespace Verticals
         [STAThread]
         static void Main(string[] args)
         {
-            var stateDir = Option(args, "--state-dir")
+            FreshUserVariables();
+            var explicitState = Option(args, "--state-dir");
+            var stateDir = explicitState
                 ?? Environment.GetEnvironmentVariable("VERTICALS_DESKTOP_STATE")
                 ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Verticals");
             stateDir = Path.GetFullPath(stateDir);
@@ -35,8 +37,9 @@ namespace Verticals
             var quit = args.Contains("--quit");
             var request = quit ? "quit" : link ?? "show";
 
-            // One copy per state folder: a second start hands its request over and ends.
-            var name = "Verticals.Desktop." + Hash(stateDir.ToLowerInvariant());
+            // One copy per user: a second start hands its request over and ends, whatever its variables say (two copies
+            // would fight over the same ports). Only a folder named on the command line, for tests, runs a copy of its own.
+            var name = explicitState == null ? "Verticals.Desktop" : "Verticals.Desktop." + Hash(stateDir.ToLowerInvariant());
             using (var mutex = new Mutex(true, @"Local\" + name, out var first))
             {
                 if (!first)
@@ -55,6 +58,20 @@ namespace Verticals
                 Listen(name, window);
                 Application.Run(new ApplicationContext());
                 mutex.ReleaseMutex();
+            }
+        }
+
+        /// The launcher's VERTICALS_DESKTOP_* user variables, when this start did not get them: a start from the taskbar or the
+        /// Start menu inherits Explorer's environment, which lacks a variable set after sign-in; HKCU\Environment has it. A
+        /// variable the start did get (a terminal's, say) stays as it is.
+        static void FreshUserVariables()
+        {
+            using (var key = Registry.CurrentUser.OpenSubKey("Environment"))
+            {
+                if (key == null) return;
+                foreach (var name in key.GetValueNames().Where(n => n.StartsWith("VERTICALS_DESKTOP_", StringComparison.OrdinalIgnoreCase)))
+                    if (Environment.GetEnvironmentVariable(name) == null && key.GetValue(name) is string value)
+                        Environment.SetEnvironmentVariable(name, Environment.ExpandEnvironmentVariables(value));
             }
         }
 
