@@ -36,7 +36,8 @@
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* Vertical only: a sideways swipe over the list must reach the board, which turns the column. */
+  overscroll-behavior-y: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -45,7 +46,7 @@
    bounce to the system. With motion reduced, by the system or by the app's Reduce Motion switch, the column stops at its
    ends; the build copies this block for the switch (vite.config.ts). */
 @media (prefers-reduced-motion: reduce) {
-  .period-slide { overscroll-behavior: none; }
+  .period-slide { overscroll-behavior-y: none; }
 }
 .period-slide::-webkit-scrollbar {
   display: none;
