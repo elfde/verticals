@@ -41,11 +41,11 @@
   margin: 0;
   border: 0;
   box-shadow: none;
-  /* S-145's whole-surface drag handle: a touch drag on this row must move the card, not scroll
-     the column body underneath it (the row's own nearest scrollable ancestor,
-     `.pattern-vertical-board__column`). Pointer (mouse) drag is unaffected — `touch-action` is a
-     touch-input-only property. */
-  touch-action: none;
+  /* S-145's whole-surface drag handle. On touch a card is picked up by a 250 ms hold (lib/dndSensor.ts),
+     so a swipe that starts on the row still scrolls: the column down, the board to the next column.
+     Once the hold has picked the card up, CardDnd.tsx stops the scroll so the finger moves the card.
+     `manipulation` only drops double-tap zoom, which would delay every tap. */
+  touch-action: manipulation;
   user-select: none;
   /* D27: press stays `grab`; only Board.tsx's armed-drag state may set `grabbing`. */
   cursor: grab;
