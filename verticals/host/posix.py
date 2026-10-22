@@ -1,4 +1,4 @@
-"""macOS and Linux: what the rest of the code did before Windows was supported, moved here unchanged."""
+"""macOS and Linux: the same names as windows.py, done the way these systems need."""
 from __future__ import annotations
 
 import os
