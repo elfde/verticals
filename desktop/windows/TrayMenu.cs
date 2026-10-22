@@ -26,7 +26,11 @@ namespace Verticals
         }
 
         // Sizes in 96-dpi pixels, scaled to the monitor the menu opens on.
-        const int Pad = 6, Row = 30, SeparatorGap = 7, TickColumn = 34, RightPad = 28, MinWidth = 220, FontPx = 14;
+        const int Pad = 6, Row = 30, SeparatorGap = 7, TickColumn = 34, RightPad = 28, MinWidth = 220, FontPx = 13;
+        // The highlight under the pointer sits inside the panel, by this much from its sides, with corners of its own.
+        const int HoverInset = 5, HoverCorner = 8;
+        // Segoe UI's capital height, as a share of its em: text is centred on its capitals, not on its line's full height.
+        const float CapHeight = 0.7f;
         // The corner: a superellipse |x|^n + |y|^n = 1 over this many pixels; n = 2 would be a circle, higher is squarer.
         const float Corner = 20, CornerPower = 4.2f;
         // The shadow: a wide soft one below the panel and a tight one at its edge, in 96-dpi pixels.
@@ -114,9 +118,9 @@ namespace Verticals
 
         /// The panel's outline: straight sides joined by superellipse corners, which bend in gradually instead of meeting
         /// an arc at a crease.
-        GraphicsPath Outline(RectangleF r)
+        GraphicsPath Outline(RectangleF r, float corner)
         {
-            var radius = Math.Min(S(Corner), Math.Min(r.Width, r.Height) / 2);
+            var radius = Math.Min(corner, Math.Min(r.Width, r.Height) / 2);
             var path = new GraphicsPath();
             var points = new List<PointF>();
             const int steps = 24;
@@ -165,7 +169,7 @@ namespace Verticals
             using (var mask = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppArgb))
             {
                 using (var g = Graphics.FromImage(mask))
-                using (var path = Outline(shape))
+                using (var path = Outline(shape, S(Corner)))
                 {
                     g.SmoothingMode = SmoothingMode.AntiAlias;
                     g.FillPath(Brushes.Black, path);
@@ -213,7 +217,7 @@ namespace Verticals
             using (var bitmap = new Bitmap(Width, Height, PixelFormat.Format32bppPArgb))
             {
                 using (var g = Graphics.FromImage(bitmap))
-                using (var outline = Outline(panel))
+                using (var outline = Outline(panel, S(Corner)))
                 {
                     g.DrawImageUnscaled(shadow, 0, 0);
                     g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -221,8 +225,11 @@ namespace Verticals
                     g.SetClip(outline);
                     g.SmoothingMode = SmoothingMode.None;
                     g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;  // over the opaque panel, so ClearType holds
-                    var format = new StringFormat(StringFormat.GenericTypographic) { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
-                    var centred = new StringFormat(format) { Alignment = StringAlignment.Center };
+                    var format = new StringFormat(StringFormat.GenericTypographic) { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
+                    var centred = new StringFormat(format) { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                    var family = font.FontFamily;
+                    var ascent = font.Size * family.GetCellAscent(font.Style) / family.GetEmHeight(font.Style);
+                    var lineHeight = font.Size * family.GetLineSpacing(font.Style) / family.GetEmHeight(font.Style);
                     for (var i = 0; i < entries.Count; i++)
                     {
                         var entry = entries[i];
@@ -233,7 +240,13 @@ namespace Verticals
                             continue;
                         }
                         if (i == hover && entry.Action != null)
-                            using (var brush = new SolidBrush(c.Hover)) g.FillRectangle(brush, r);
+                        {
+                            g.SmoothingMode = SmoothingMode.AntiAlias;
+                            using (var brush = new SolidBrush(c.Hover))
+                            using (var highlight = Outline(new RectangleF(r.X + S(HoverInset), r.Y, r.Width - 2 * S(HoverInset), r.Height), S(HoverCorner)))
+                                g.FillPath(brush, highlight);
+                            g.SmoothingMode = SmoothingMode.None;
+                        }
                         using (var brush = new SolidBrush(entry.Action != null ? c.Text : c.Muted))
                         {
                             if (entry.Checked)
@@ -243,7 +256,9 @@ namespace Verticals
                                 g.DrawString("", glyphs, brush, new RectangleF(r.X, r.Y, S(TickColumn), r.Height), centred);
                                 g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
                             }
-                            g.DrawString(entry.Text, font, brush, new RectangleF(r.X + S(TickColumn), r.Y, r.Width - S(TickColumn) - S(RightPad) / 2, r.Height), format);
+                            // The baseline sits half a capital below the row's middle.
+                            var top = r.Y + r.Height / 2f + font.Size * CapHeight / 2 - ascent;
+                            g.DrawString(entry.Text, font, brush, new RectangleF(r.X + S(TickColumn), top, r.Width - S(TickColumn) - S(RightPad) / 2, lineHeight), format);
                         }
                     }
                 }
