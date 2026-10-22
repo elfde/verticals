@@ -7,6 +7,7 @@ import { stepPhrase } from './agentSteps'
 import { answersAvailable, refreshAnswers } from './answerUndo'
 import { commandFilter } from './commandFilter'
 import { goalChangesSince } from './goalChanges'
+import { encodePictures } from './reportImages'
 
 export interface AgentInfo {
   id: string
@@ -55,6 +56,8 @@ export interface Ask {
 }
 export interface Balloon {
   key: string; who: 'you' | 'agent'; text: string; error?: boolean; ask?: Ask; pending?: boolean
+  /** The pictures you sent with your words, as the page shows them (docs/design/chat-pictures.md). */
+  pictures?: string[]
   /** The answer the message belongs to: what its writes changed is kept under it (`lib/answerUndo.ts`). */
   answer?: string
 }
@@ -110,6 +113,16 @@ export const agentOf = (id: string | undefined): AgentInfo => agentChat.agents.f
   ?? { id: id ?? 'claude', label: id === 'codex' ? 'Codex' : 'Claude Code', image: `${id ?? 'claude'}.svg`, available: false,
     efforts: [], fast: '', permissions: [], defaultEffort: 'medium', defaultPermission: '' }
 export const assetUrl = (name: string) => `/__chat/assets/${name}`
+/** A picture the gateway kept from your message, by the name it gave it. */
+export const pictureUrl = (name: string) => `/__chat/pictures/${encodeURIComponent(name)}`
+/** How much of a data URL one picture may take on its way to the agent: a clear screenshot, well under what Claude takes (5 MB). */
+const PICTURE_CHARS = 1_500_000
+
+/** The pictures of your message: the gateway's once it has them, until then the files you dropped. */
+function picturesOf(event: ChatEvent): string[] | undefined {
+  if (Array.isArray(event.pictures) && event.pictures.length) return event.pictures.map((name) => pictureUrl(String(name)))
+  return Array.isArray(event.previews) && event.previews.length ? event.previews.map(String) : undefined
+}
 
 /** The conversation as balloons: yours, and one of the agent's per turn, an ask inside it. */
 export const balloons = computed<Balloon[]>(() => {
@@ -129,7 +142,8 @@ export const balloons = computed<Balloon[]>(() => {
       case 'user':
         turn = null
         // What the app asked on its own (the morning report, lib/morning.ts) is no balloon of yours.
-        if (!event.app) out.push({ key: `u${index}`, who: 'you', text: String(event.text ?? ''), pending: !!event.pending })
+        if (!event.app) out.push({ key: `u${index}`, who: 'you', text: String(event.text ?? ''), pending: !!event.pending,
+          pictures: picturesOf(event) })
         break
       case 'turn_start':
         turn = null
@@ -436,6 +450,10 @@ function connect(): void {
     const last = agentChat.history[agentChat.history.length - 1]
     if (event.t === 'user' && last?.t === 'user' && last.pending && last.text === event.text) {
       last.pending = false
+      // The pictures are the gateway's now: the files' previews go.
+      if (Array.isArray(event.pictures)) last.pictures = event.pictures
+      if (Array.isArray(last.previews)) (last.previews as string[]).forEach((url) => URL.revokeObjectURL(url))
+      delete last.previews
       save(KEY.events(session), agentChat.history)
       return
     }
@@ -494,8 +512,10 @@ export async function reportKind(words: string): Promise<ReportVerdict> {
 }
 
 /** Your words, as your balloon at once; while the agent works they wait in the server's queue (S2.P1.015). `settings`
- *  adds to the agent's for this turn: the morning report's `{ sources: 'connected' }` (lib/morning.ts). */
-export async function send(text: string, extra: Record<string, unknown> = {}, settings: Record<string, unknown> = {}): Promise<void> {
+ *  adds to the agent's for this turn: the morning report's `{ sources: 'connected' }` (lib/morning.ts). `files`: pictures
+ *  that go with the words, drawn small enough to carry and shown in your balloon (docs/design/chat-pictures.md). */
+export async function send(text: string, extra: Record<string, unknown> = {}, settings: Record<string, unknown> = {},
+  files: File[] = []): Promise<void> {
   const words = text.trim()
   if (!words || !agentChat.available) return
   if (!agentChat.current) newThread()
@@ -507,7 +527,10 @@ export async function send(text: string, extra: Record<string, unknown> = {}, se
   touchThread({ provider: agentChat.selection!.provider, status: 'working' })
   agentChat.answer = null
   awaitingReplies += 1
-  record({ t: 'user', text: words, pending: true, ...(settings.sources ? { app: true } : {}) }, false)
+  record({ t: 'user', text: words, pending: true, ...(settings.sources ? { app: true } : {}),
+    ...(files.length ? { previews: files.map((file) => URL.createObjectURL(file)) } : {}) }, false)
+  const encoded = files.length ? await encodePictures(files, files.length * PICTURE_CHARS) : null
+  if (encoded?.left) record({ t: 'local_error', text: `${encoded.left === 1 ? 'A picture' : `${encoded.left} pictures`} could not be read, and went without.` }, false)
   const since: Record<string, unknown> = {}
   if (goal && goalSince !== null) {
     since.continuing = true
@@ -515,7 +538,8 @@ export async function send(text: string, extra: Record<string, unknown> = {}, se
   }
   try {
     await api('send', { session: agentChat.current, text: words, context: { ...pageContext(goal), ...since, ...extra },
-      settings: { ...agentChat.selection, ...settings }, mode: agentChat.running ? 'queue' : 'send' })
+      settings: { ...agentChat.selection, ...settings }, mode: agentChat.running ? 'queue' : 'send',
+      ...(encoded?.sources.length ? { pictures: encoded.sources } : {}) })
   } catch (error) {
     record({ t: 'local_error', text: (error as Error).message }, false)
     touchThread({ status: agentChat.running ? 'working' : 'idle' })

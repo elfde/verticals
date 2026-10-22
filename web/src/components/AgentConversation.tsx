@@ -117,6 +117,11 @@ export const AgentConversation = tracked(function AgentConversation({ onLink, ..
                   data-who={balloon.who}
                   aria-label={balloon.who === 'you' ? 'You' : name}
                 >
+                  {balloon.pictures?.length ? (
+                    <div className="agent-balloon__pictures">
+                      {balloon.pictures.map((src, index) => <img key={index} className="agent-balloon__picture" src={src} alt="" />)}
+                    </div>
+                  ) : null}
                   {balloon.who === 'you' ? (
                     <div className="agent-balloon__plain">{balloon.text}</div>
                   ) : withoutChipLines(balloon.text) ? (

@@ -1,8 +1,10 @@
 // Pictures waiting above the field (docs/design/bug-reports.md). A picture dropped on the window or pasted stands above the
 // field as a goal let go over it does (MovingStack.tsx hosts both), and the field widens to hold them. Past a few they
 // overlap, so any number still fits; the one under the pointer lifts out, bigger (FieldPictures.tsx). They wait until the
-// person says what they see and what they want: then they are the report's pictures (lib/report.ts).
+// person says what they see and what they want: then they are the report's pictures (lib/report.ts). With the conversation
+// open they are the message's instead, and go to the agent with the words (docs/design/chat-pictures.md).
 import { computed, reactive } from '../reactivity'
+import { agentChat } from './agentChat'
 
 export interface FieldPicture {
   id: string
@@ -25,8 +27,8 @@ export const pictures = reactive({
   sending: false,
 })
 
-/** The field is a report's: pictures wait above it. */
-export const reporting = computed(() => pictures.list.length > 0)
+/** The field is a report's: pictures wait above it, and no conversation is open to take them. */
+export const reporting = computed(() => pictures.list.length > 0 && !agentChat.open)
 
 /** The height of a picture in the stack, the width it takes at that height (36 to 112: a wide screenshot is 90, a phone's
  *  36) and the gap between two; the stack never asks the field for more than `STACK_MAX`, and past that they overlap. */
@@ -85,6 +87,13 @@ export function removePicture(id: string): void {
   URL.revokeObjectURL(pictures.list[at]!.url)
   pictures.list.splice(at, 1)
   if (pictures.picked === id) pictures.picked = null
+}
+
+/** The pictures' files, in the order they came, and the stack emptied: they go with a message. */
+export function takePictures(): File[] {
+  const files = pictures.list.map((picture) => picture.file)
+  clearPictures()
+  return files
 }
 
 export function clearPictures(): void {

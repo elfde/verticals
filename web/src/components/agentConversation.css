@@ -59,6 +59,9 @@
 }
 .agent-balloon--error { color: rgb(255 255 255 / 72%); }
 .agent-balloon__plain { white-space: pre-wrap; }
+/* The pictures you sent, above your words, inset from the balloon's edge as its corners are. */
+.agent-balloon__pictures { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: -4px -12px 10px; }
+.agent-balloon__picture { display: block; max-width: 100%; max-height: 160px; border-radius: 12px; object-fit: contain; }
 .agent-balloon__markdown p, .agent-balloon__markdown ul, .agent-balloon__markdown ol, .agent-balloon__markdown pre,
 .agent-balloon__markdown blockquote, .agent-balloon__markdown .chat-table { margin: 0 0 12px; }
 .agent-balloon__markdown > :last-child { margin-bottom: 0; }
