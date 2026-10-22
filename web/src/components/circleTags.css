@@ -14,7 +14,8 @@
     left var(--vt-dur-close) var(--vt-ease-large), translate var(--vt-dur-close) var(--vt-ease-large),
     padding-left var(--vt-dur-close) var(--vt-ease-large);
 }
-.circle-tags.is-shown, .circle-tags:focus-within {
+/* While the agent's menu is open the tags stay, so the pointer can cross the gap up to it from the closed circle. */
+.circle-tags.is-shown, .circle-tags:focus-within, .circle-tags:has(.agent-picker) {
   opacity: 1;
   transform: none;
   pointer-events: auto;
