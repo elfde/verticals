@@ -44,8 +44,8 @@
   transform-origin: 50% 100%;
   transition: opacity var(--gone-ms, 200ms) ease, filter var(--gone-ms, 200ms) ease, transform var(--gone-ms, 200ms) ease;
 }
-.agent-balloon--you { align-self: flex-end; max-width: 400px; padding: 12px 20px 13px; background: #2b2b2b; --turn: 1; --toward: -1; }
-.agent-balloon--agent { align-self: flex-start; width: fit-content; max-width: 420px; padding: 14px 22px 15px; background: #000; --turn: -1; --toward: 1; }
+.agent-balloon--you { align-self: flex-end; max-width: 400px; padding: 12px 20px 13px; background: var(--vt-chat-raised); --turn: 1; --toward: -1; }
+.agent-balloon--agent { align-self: flex-start; width: fit-content; max-width: 420px; padding: 14px 22px 15px; background: var(--vt-chat-bg); --turn: -1; --toward: 1; }
 .agent-balloon[data-side='top'] {
   opacity: 0;
   filter: blur(var(--gone-blur, 6px));
@@ -57,7 +57,7 @@
   transform: translate(calc(var(--toward) * var(--gone-x, 22px)), var(--gone-y, 14px)) rotate(calc(var(--turn) * var(--gone-turn, 2deg)))
     scale(var(--gone-scale, .78));
 }
-.agent-balloon--error { color: rgb(255 255 255 / 72%); }
+.agent-balloon--error { color: rgb(var(--vt-chat-ink-rgb) / 72%); }
 .agent-balloon__plain { white-space: pre-wrap; }
 /* The pictures you sent, above your words, inset from the balloon's edge as its corners are. */
 .agent-balloon__pictures { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: -4px -12px 10px; }
@@ -68,10 +68,10 @@
 .agent-balloon__markdown ul, .agent-balloon__markdown ol { padding-left: 20px; }
 .agent-balloon__markdown strong { font-weight: 600; }
 .agent-balloon__markdown a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .15em;
-  text-decoration-color: rgb(255 255 255 / 40%); cursor: pointer; }
+  text-decoration-color: rgb(var(--vt-chat-ink-rgb) / 40%); cursor: pointer; }
 .agent-balloon__markdown code { font-size: 13px; }
 .agent-balloon__markdown pre { overflow-x: auto; }
-.agent-balloon__markdown blockquote { padding-left: 12px; border-left: 2px solid rgb(255 255 255 / 30%); }
+.agent-balloon__markdown blockquote { padding-left: 12px; border-left: 2px solid rgb(var(--vt-chat-ink-rgb) / 30%); }
 .agent-balloon__markdown .chat-table { overflow-x: auto; }
 .agent-balloon__markdown table { border-collapse: collapse; font-size: 13px; line-height: 18px; }
 .agent-balloon__markdown th, .agent-balloon__markdown td { padding: 4px 12px 4px 0; text-align: left; vertical-align: top; }
@@ -81,7 +81,7 @@
 .agent-balloon__ask-title--changes { margin-bottom: 0; }
 .agent-balloon__ask-changes { margin: 0 0 10px; }
 .agent-balloon__ask-changes:last-child { margin-bottom: 0; }
-.agent-balloon__ask-sep { color: rgb(255 255 255 / 40%); }
+.agent-balloon__ask-sep { color: rgb(var(--vt-chat-ink-rgb) / 40%); }
 .agent-balloon__markdown + .agent-balloon__ask { margin-top: 12px; }
 /* What the message made or changed, one chip under another, after its words. */
 .agent-balloon__markdown + .agent-balloon__chips { margin-top: 14px; }
@@ -92,12 +92,12 @@
   padding: 0 14px;
   border: 0;
   border-radius: 16px;
-  background: #fff;
-  color: #000;
+  background: var(--vt-chat-key-bg);
+  color: var(--vt-chat-key-ink);
   font: 500 14px/20px var(--font-body);
   cursor: pointer;
 }
-.agent-balloon__choice:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.agent-balloon__choice:focus-visible { outline: 2px solid rgb(var(--vt-chat-ink-rgb)); outline-offset: 2px; }
 .agent-conversation-enter-active { transition: clip-path var(--vt-dur-rise) var(--vt-ease-large), opacity var(--vt-dur-rise) linear; }
 .agent-conversation-leave-active { transition: clip-path var(--vt-dur-fade) var(--vt-ease-large), opacity var(--vt-dur-fade) linear; }
 .agent-conversation-enter-from, .agent-conversation-leave-to { clip-path: inset(100% 0 0 0); opacity: 0; }

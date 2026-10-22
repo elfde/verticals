@@ -1,6 +1,6 @@
 .agent-tag-wrap { position: relative; }
 .agent-tag { gap: 2px; }
-.agent-tag__mark { width: 16px; height: 16px; filter: brightness(0) invert(1); }
+.agent-tag__mark { width: 16px; height: 16px; filter: var(--vt-chat-mark); }
 .agent-picker:focus { outline: none; }
 .agent-picker {
   position: absolute;
@@ -30,7 +30,7 @@
   cursor: pointer;
 }
 .agent-picker__new:hover { background: rgb(var(--vt-text-rgb, 0 0 0) / 5%); }
-.agent-picker__columns { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; max-height: 360px; overflow: auto; }
+.agent-picker__columns { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-height: 360px; overflow: auto; }
 .agent-picker h2 { margin: 8px 10px 4px; color: rgb(var(--vt-text-rgb, 0 0 0) / 45%); font: 500 11px/16px var(--font-body); }
 .agent-picker__choice {
   display: flex;
@@ -47,6 +47,14 @@
   cursor: pointer;
 }
 .agent-picker__choice img { width: 16px; height: 16px; }
+/* Each chat tone's ground with a stroke of its type, so the choice shows what it gives. */
+.agent-picker__swatch { flex: none; position: relative; width: 16px; height: 16px; border-radius: 50%;
+  box-shadow: inset 0 0 0 .5px rgb(var(--vt-text-rgb, 0 0 0) / 20%); }
+.agent-picker__swatch::after { content: ''; position: absolute; left: 7px; top: 4px; width: 2px; height: 8px; border-radius: 1px; }
+.agent-picker__swatch--black { background: #000; }
+.agent-picker__swatch--black::after { background: #fff; }
+.agent-picker__swatch--soft { background: #000; }
+.agent-picker__swatch--soft::after { background: #e5e5e5; }
 .agent-picker__choice small { display: block; color: rgb(var(--vt-text-rgb, 0 0 0) / 45%); font-size: 11px; }
 .agent-picker__choice:hover:not(:disabled) { background: rgb(var(--vt-text-rgb, 0 0 0) / 5%); }
 .agent-picker__choice[aria-pressed='true'] { font-weight: 600; }

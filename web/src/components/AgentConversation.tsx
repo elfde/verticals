@@ -65,7 +65,7 @@ export const AgentConversation = tracked(function AgentConversation({ onLink, ..
       const dy = f.top - (box.top + parseFloat(style.paddingTop))
       const from = `translate(${dx}px, ${dy}px)`
       if (f.kind === 'sent') {
-        last.animate([{ transform: from, backgroundColor: 'rgb(43 43 43 / 0)' }, { transform: 'none', backgroundColor: '#2b2b2b' }],
+        last.animate([{ transform: from, backgroundColor: 'transparent' }, { transform: 'none', backgroundColor: style.backgroundColor }],
           { duration: 280, easing: curve('large') })
         return
       }

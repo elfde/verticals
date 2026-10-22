@@ -3,6 +3,34 @@
   --vt-goal-wash: 100%;
   --vt-on-black: #fff;
   --vt-on-black-muted: rgb(255 255 255 / 50%);
+  /* The chat: the field, its tags and notices, the balloons. Black by default; lib/chatTone.ts picks another tone. */
+  --vt-chat-bg: #000;
+  --vt-chat-raised: #2b2b2b;
+  --vt-chat-ink-rgb: 255 255 255;
+  --vt-chat-secondary: rgb(255 255 255 / 64%);
+  --vt-chat-muted: rgb(255 255 255 / 50%);
+  --vt-chat-faint: rgb(255 255 255 / 40%);
+  --vt-chat-key-bg: #fff;
+  --vt-chat-key-hover: #ececf0;
+  --vt-chat-key-ink: #000;
+  --vt-chat-mark: brightness(0) invert(1);
+}
+
+/* Soft dresses the chat while it is open: the conversation, and the field once it opens or while the conversation
+   stands. Closed, the circle and its tags stay black. Its type is a light grey instead of white, about 16:1 instead of
+   21:1, in either appearance; quiet text stays at 4.5:1 or more. */
+:root[data-chat-tone='soft'] :is(.agent-conversation, html:has(.agent-conversation) .circle-field,
+  .circle-field:is([data-state='open'], [data-state='typing'], [data-state='answer'])) {
+  --vt-chat-ink-rgb: 229 229 229;
+  --vt-on-black: #e5e5e5;
+  --vt-on-black-muted: #8f8f8f;
+  --vt-chat-secondary: #b0b0b0;
+  --vt-chat-muted: #8f8f8f;
+  --vt-chat-faint: #707070;
+  --vt-chat-key-bg: #e5e5e5;
+  --vt-chat-key-hover: #d0d0d0;
+  --vt-chat-key-ink: #000;
+  --vt-chat-mark: brightness(0) invert(.9);
 }
 
 @media (prefers-color-scheme: dark) {

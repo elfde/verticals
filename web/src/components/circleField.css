@@ -26,8 +26,8 @@
 }
 .circle-field__above > * { pointer-events: auto; }
 /* A hidden row takes no pointer, but a row the focus is in stays shown (circleTags.css), the agent's menu with it: the
-   agent tag takes the focus from the field when it opens its menu. */
-.circle-field__above > .circle-tags:not(.is-shown):not(:focus-within) { pointer-events: none; }
+   agent tag takes the focus from the field when it opens its menu. While the menu is open the row stays too. */
+.circle-field__above > .circle-tags:not(.is-shown):not(:focus-within):not(:has(.agent-picker)) { pointer-events: none; }
 /* The tags' row and the 8 px under it count as the field (S2.P2.012), so the hand reaches a tag from anywhere on it. */
 .circle-field__bridge { position: absolute; left: 0; right: 0; top: 0; bottom: -8px; z-index: -1; pointer-events: none; }
 .circle-field__bridge.is-shown { pointer-events: auto; }
@@ -54,7 +54,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--vt-radius-field);
-  background: #000;
+  background: var(--vt-chat-bg);
   transition: border-radius var(--vt-dur-shape) var(--vt-ease-large);
 }
 /* A message inside the field takes a message's corners, the balloon's, not the pill's (round 11, KK 7 Oct 2026: "Rounding
@@ -95,13 +95,13 @@
   scrollbar-width: none;
 }
 .circle-field__words textarea::-webkit-scrollbar { display: none; }
-.circle-field__words textarea::selection { background: rgb(255 255 255 / 30%); }
+.circle-field__words textarea::selection { background: rgb(var(--vt-chat-ink-rgb) / 30%); }
 .circle-field__mirror { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; }
 .circle-field__caption {
   position: absolute;
   left: 0;
   bottom: 0;
-  color: rgb(255 255 255 / 40%);
+  color: var(--vt-chat-faint);
   font: 400 28px/36px var(--font-body);
   white-space: nowrap;
   pointer-events: none;
@@ -133,7 +133,7 @@
   transition: opacity var(--vt-dur-fade) ease-out;
 }
 .circle-field__send.is-shown { opacity: 1; pointer-events: auto; }
-.circle-field__send:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 4px; }
+.circle-field__send:focus-visible { outline: 2px solid rgb(var(--vt-chat-ink-rgb)); outline-offset: 3px; border-radius: 4px; }
 .circle-field__line {
   position: absolute;
   left: 50%;
@@ -142,7 +142,7 @@
   height: 24px;
   margin: -12px 0 0 -1.5px;
   border-radius: 1.5px;
-  background: #fff;
+  background: rgb(var(--vt-chat-ink-rgb));
   pointer-events: none;
   /* Under the pointer it grows (below); it settles back in 200 ms on the app's ease-out token. */
   transition: width var(--dur-base) var(--ease-out), height var(--dur-base) var(--ease-out),
@@ -181,8 +181,8 @@
   background: transparent;
   cursor: pointer;
 }
-.circle-field__stop span { width: 14px; height: 14px; border-radius: 3px; background: #fff; }
-.circle-field__stop:hover { background: #2b2b2b; }
+.circle-field__stop span { width: 14px; height: 14px; border-radius: 3px; background: rgb(var(--vt-chat-ink-rgb)); }
+.circle-field__stop:hover { background: var(--vt-chat-raised); }
 
 /* The answer inside the circle, which grows around it (S2.P4): the message's own words, three lines at most. */
 .circle-field__answer {
@@ -219,7 +219,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
-  color: rgb(255 255 255 / 64%);
+  color: var(--vt-chat-secondary);
 }
 .circle-field__answer-measure--lead { width: 376px; }
 /* A message that made or changed something (docs/design/agent-chips.md): the balloon in the field. Two lines of the message,
@@ -228,7 +228,7 @@
 .circle-field__answer--chips { inset: auto 32px 24px; justify-content: flex-end; }
 .circle-field__answer--chips .circle-field__answer-words { -webkit-line-clamp: 2; margin-bottom: 14px; }
 .circle-field__answer-chips { flex: none; }
-.circle-field__answer-more { margin: 12px 0 0; font: 400 13px/22px var(--font-body); color: rgb(255 255 255 / 50%); }
+.circle-field__answer-more { margin: 12px 0 0; font: 400 13px/22px var(--font-body); color: var(--vt-chat-muted); }
 .circle-field__answer-caret {
   display: inline-block;
   width: 2px;
@@ -236,7 +236,7 @@
   margin-left: 3px;
   vertical-align: -3px;
   border-radius: 1px;
-  background: #fff;
+  background: rgb(var(--vt-chat-ink-rgb));
   animation: circle-field-blink 1060ms steps(1) infinite;
 }
 .circle-field__answer-choices { display: flex; gap: 8px; margin-top: 10px; }
@@ -247,8 +247,8 @@
   padding: 0 14px;
   border: 0;
   border-radius: 16px;
-  background: #fff;
-  color: #000;
+  background: var(--vt-chat-key-bg);
+  color: var(--vt-chat-key-ink);
   font: 500 14px/20px var(--font-body);
   cursor: pointer;
 }
