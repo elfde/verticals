@@ -129,13 +129,15 @@ namespace Verticals
 
         void StartBackend()
         {
+            // Only a state folder without a database is a first launch; every other start just starts.
+            var first = !Directory.Exists(Path.Combine(backend.StateDir, "postgres"));
             var error = backend.Start(AgentEnvironment());
             if (error != null) { Fail(error); return; }
             backend.Exited += code => BeginInvoke(new Action(() =>
             {
                 if (!quitting) Fail($"Verticals stopped (exit {code}). See {backend.LogPath}.");
             }));
-            SetStatus("Starting Verticals… (the first launch sets up the database, about a minute)");
+            SetStatus(first ? "Starting Verticals… (the first launch sets up the database, about a minute)" : "Starting Verticals…");
             WaitForBackend();
         }
 
