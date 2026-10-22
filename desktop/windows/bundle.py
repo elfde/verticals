@@ -6,6 +6,7 @@
     python desktop/windows/bundle.py --version 0.4   # app version (CI passes the release's)
     python desktop/windows/bundle.py --dev        # a dev build: the yellow icon, so it never passes for the app people use
     python desktop/windows/bundle.py --no-installer  # the folder and the zip only
+    python desktop/windows/bundle.py --installer-only   # remake the installer from the existing folder (macOS: --dmg-only)
 
 The app's folder mirrors the repository, as Verticals.app's Resources do: verticals/, desktop/ (launcher, chat, UI build)
 and the skills the chat reads (SKILLS below), beside Verticals.exe and its WebView2 libraries, plus Python 3.12 with the
@@ -292,6 +293,11 @@ def main():
     if not (ROOT / "build/web/index.html").exists():
         sys.exit("desktop/build/web is missing; build the UI first (see desktop/README.md)")
     DIST.mkdir(parents=True, exist_ok=True)
+    if "--installer-only" in sys.argv:
+        if not (APP / "Verticals.exe").exists():
+            sys.exit(f"{APP} is missing; build it first")
+        log(f"done: {make_installer()}")
+        return
     shutil.rmtree(APP, ignore_errors=True)
     APP.mkdir()
     build_exe()

@@ -221,6 +221,7 @@ After step 1 above, on Windows 10 or 11 (x64) with the .NET SDK, uv with a manag
 python desktop/windows/bundle.py             # -> desktop/dist/Verticals/, Verticals-Setup.exe and Verticals-windows.zip
 python desktop/windows/bundle.py --version 0.4   # the app's and the installer's version (default 0.2)
 python desktop/windows/bundle.py --dev           # a dev build: the yellow icon
+python desktop/windows/bundle.py --installer-only  # the installer again from the existing folder
 ```
 
 `DOTNET` and `ISCC` name `dotnet` and Inno Setup's `ISCC.exe` when they are not on the PATH. The folder mirrors the
@@ -230,8 +231,8 @@ Mac keeps and the DLLs they import (read from their import tables, as `otool` re
 that PostgreSQL and imports the API and the MCP server with a bare PATH, so nothing outside the folder is used.
 
 `Verticals-Setup.exe` installs for the current user without admin rights into `%LOCALAPPDATA%\Programs\Verticals`, adds
-Verticals to the Start menu (a desktop shortcut if chosen) and registers `verticals://` links. Where Windows 10 lacks
-WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals quits it first with `--quit`, so its
+Verticals to the Start menu and, if chosen, the desktop (two checkboxes, the first on) and registers `verticals://`
+links. Where Windows 10 lacks WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals quits it first with `--quit`, so its
 database stops cleanly, then replaces the whole folder. Uninstalling (Settings → Apps) quits it too, takes it off the
 taskbar and the Start menu where it was pinned (`Verticals.exe --unpin`, while the exe is still there: Windows matches a
 pin only to a program that exists), and removes the app, its links and its login item; the data in

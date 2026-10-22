@@ -2,7 +2,7 @@
 ; compiles this with Inno Setup 6, passing AppVersion, SourceDir (the folder), OutputDir and IconFile.
 ;
 ; It installs for the current user, without admin rights, into %LOCALAPPDATA%\Programs\Verticals, adds Verticals to the
-; Start menu and registers verticals:// links. An update replaces the whole folder, as an update replaces the whole
+; Start menu (a checkbox, on) and the desktop (a checkbox, off) and registers verticals:// links. An update replaces the whole folder, as an update replaces the whole
 ; Verticals.app, after quitting a running copy as its Quit does, so the database stops cleanly. The data in
 ; %LOCALAPPDATA%\Verticals stays through updates and uninstalling, as ~/Library/Application Support/Verticals does.
 ; Where Windows 10 lacks WebView2, the installer fetches Microsoft's own installer for it.
@@ -49,8 +49,12 @@ Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 [CustomMessages]
 en.GettingWebView2=Getting Microsoft Edge WebView2, which shows the board
 ru.GettingWebView2=Загружаю Microsoft Edge WebView2: в нём показывается доска
+en.CreateStartMenuIcon=Create a Start menu shortcut
+ru.CreateStartMenuIcon=Создать ярлык в меню «Пуск»
 
 [Tasks]
+; The Start menu shortcut is what All apps and Windows search find; on by default, as most installers have it.
+Name: "startmenuicon"; Description: "{cm:CreateStartMenuIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [InstallDelete]
@@ -67,7 +71,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 ; The same AppUserModelID as Verticals.exe gives itself, so a pinned icon and the running window are one on the taskbar.
-Name: "{autoprograms}\Verticals"; Filename: "{app}\Verticals.exe"; AppUserModelID: "Verticals.Desktop"
+Name: "{autoprograms}\Verticals"; Filename: "{app}\Verticals.exe"; AppUserModelID: "Verticals.Desktop"; Tasks: startmenuicon
 Name: "{autodesktop}\Verticals"; Filename: "{app}\Verticals.exe"; AppUserModelID: "Verticals.Desktop"; Tasks: desktopicon
 
 [Registry]
