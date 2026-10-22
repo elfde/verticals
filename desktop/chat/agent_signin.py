@@ -377,9 +377,7 @@ class SignIn:
         turn's, a Replan's). Its agent starts afresh, so it reads the new sign-in; a session the failed turn left no file of
         begins anew, told only what was said before that message."""
         s, chat = w.session, self.chat
-        agent, s.agent = s.agent, None
-        if agent is not None:
-            agent.close()
+        chat.close_agent(s)
         session_id = chat.load().get(s.id, {}).get("sessionId")
         if session_id and agent_sessions.session_file(w.provider, session_id) is None:
             chat.update(s.id, sessionId=None)

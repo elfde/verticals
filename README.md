@@ -24,7 +24,9 @@ see [License](#license).
 
 ## Native local startup
 
-Requires Python 3.12, Node 22+ with npm, PostgreSQL 16 including pg_trgm.
+Requires Python 3.12, Node 22+ with npm, PostgreSQL 16 including pg_trgm and ICU support.
+Search ignores letter case in titles and notes, including Cyrillic, even in databases
+initialized with locale C.
 No system database service needed. Homebrew/Linux binaries are detected; override
 with VERTICALS_PG_BIN pointing to the PostgreSQL bin directory.
 

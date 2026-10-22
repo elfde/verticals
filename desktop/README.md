@@ -97,6 +97,8 @@ board and MCP are running, and has:
 - A link `verticals://goal/<id>` — the app is registered for the `verticals` scheme: a click on one in Terminal or
   Codex brings the window forward and opens that task (`board/#goal/<id>`); a link in the board's own page does the same.
 - Open at Login — a login item (`SMAppService`); at login Vertical starts in the menu bar only.
+- Restart Verticals — quits as Quit does and opens the app again on the same page; with an update downloaded it is
+  the title bar's Restart. Also in the Verticals menu.
 - Quit Verticals — the only way, with ⌘Q, to stop the board and MCP.
 
 ## Which account the agents use
