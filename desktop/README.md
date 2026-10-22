@@ -141,8 +141,9 @@ for the chat, an agent CLI: `claude` (signed in) and optionally `codex`.
 Ports: UI 8288, API 8299, MCP 8281, PostgreSQL 55539 (override with `VERTICALS_DESKTOP_UI_PORT`,
 `..._API_PORT`, `..._MCP_PORT`, `..._PG_PORT`). State: `VERTICALS_DESKTOP_STATE`. Other names a browser uses for the UI:
 `VERTICALS_DESKTOP_HOSTS`, comma-separated with their port when it is not 80 (say `verticals.localhost` forwarded from
-port 80); the gateway answers no host it was not told. A database left running by a launcher that was killed is
-reused by the next start.
+port 80); the gateway answers no host it was not told. `VERTICALS_DESKTOP_LAN=1` opens the UI to the home network:
+the gateway listens on every address and answers the computer's IP on the UI port, so a phone opens
+`http://<computer's IP>:<UI port>`. A database left running by a launcher that was killed is reused by the next start.
 
 ### Windows
 

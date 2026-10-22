@@ -16,6 +16,7 @@ systems is in verticals/host.
 from __future__ import annotations
 
 import http.client
+import ipaddress
 import json
 import os
 import secrets
@@ -65,6 +66,24 @@ UI_HOSTS = {f"127.0.0.1:{UI_PORT}", f"localhost:{UI_PORT}"}
 for _host in filter(None, (h.strip() for h in os.environ.get("VERTICALS_DESKTOP_HOSTS", "").split(","))):
     UI_HOSTS.add(_host)
     UI_ORIGINS.add(f"http://{_host}")
+# VERTICALS_DESKTOP_LAN=1 opens the UI to the home network: the gateway listens on every address, and a phone may come by
+# any IP the computer has today on the UI port. An address, unlike a name, can't be rebound to another site.
+LAN = os.environ.get("VERTICALS_DESKTOP_LAN") == "1"
+
+
+def known_host(value):
+    if value in UI_HOSTS:
+        return True
+    if not LAN:
+        return False
+    name, _, port = (value or "").rpartition(":")
+    try:
+        ipaddress.ip_address(name.strip("[]"))
+    except ValueError:
+        return False
+    return port == str(UI_PORT)
+
+
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
          ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json",
          ".woff2": "font/woff2", ".woff": "font/woff", ".mp3": "audio/mpeg", ".wav": "audio/wav",
@@ -249,10 +268,10 @@ def make_gateway(token, chat):
         def allowed(self):
             # The gateway holds the API token, so only this UI may use it: block DNS rebinding
             # (Host) and cross-site requests from other pages (Origin / Sec-Fetch-Site).
-            if self.headers.get("Host") not in UI_HOSTS:
+            if not known_host(self.headers.get("Host")):
                 return self.deny(403, "bad host")
             origin = self.headers.get("Origin")
-            if origin and origin not in UI_ORIGINS:
+            if origin and not (origin.startswith("http://") and known_host(origin[7:])):
                 return self.deny(403, "bad origin")
             if self.headers.get("Sec-Fetch-Site", "same-origin") not in ("same-origin", "none"):
                 return self.deny(403, "cross-site request")
@@ -401,7 +420,7 @@ def make_gateway(token, chat):
                 pass
 
         def static(self, path=None):
-            if self.headers.get("Host") not in UI_HOSTS:
+            if not known_host(self.headers.get("Host")):
                 return self.deny(403, "bad host")
             if path is None:
                 rel = self.path.split("?", 1)[0].lstrip("/")
@@ -547,7 +566,8 @@ def main():
             procs.append(host.spawn_service(name, argv, cwd=APP, env=env, logfile=STATE / f"{name}.log"))
         running["chat"] = Chat(STATE, f"http://127.0.0.1:{MCP_PORT}/mcp", cfg["token"],
                                api_url=f"http://127.0.0.1:{API_PORT}")
-        gateway = running["gateway"] = Gateway(("127.0.0.1", UI_PORT), make_gateway(cfg["token"], running["chat"]))
+        gateway = running["gateway"] = Gateway(("0.0.0.0" if LAN else "127.0.0.1", UI_PORT),
+                                               make_gateway(cfg["token"], running["chat"]))
         threading.Thread(target=gateway.serve_forever, daemon=True).start()
         wait_healthy()
         write_mcp_config(cfg["token"])
