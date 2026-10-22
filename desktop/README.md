@@ -46,9 +46,10 @@ launcher has its own ports, database, state directory and UI build.
   downloads and installs updates), `UpdateIndicator.swift` (the Update button in the title bar) and `bundle.py`
   (self-contained `Verticals.app` + `.dmg`).
 - `windows/` — `Verticals.exe` for Windows (see Windows below): `MainWindow.cs` (the window, WebView2, and the tray icon
-  with its menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin of `AppLinks.swift`), `Agents.cs`
-  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `Pins.cs` (unpinning), `TrayMenu.cs` (the tray menu), `bundle.py` (self-contained
-  `Verticals` folder, `Verticals-Setup.exe` and a zip) and `installer.iss` (the installer). No updates yet.
+  with its menu), `TrayMenu.cs` (the tray menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin
+  of `AppLinks.swift`), `Agents.cs` (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login),
+  `Pins.cs` (unpinning), `bundle.py` (self-contained `Verticals` folder, `Verticals-Setup.exe` and a zip) and
+  `installer.iss` (the installer). No updates yet.
 
 The agent picker follows Enjoy's (strings, model artwork).
 
