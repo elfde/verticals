@@ -47,7 +47,7 @@ launcher has its own ports, database, state directory and UI build.
   (self-contained `Verticals.app` + `.dmg`).
 - `windows/` — `Verticals.exe` for Windows (see Windows below): `MainWindow.cs` (the window, WebView2, and the tray icon
   with its menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin of `AppLinks.swift`), `Agents.cs`
-  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `Pins.cs` (unpinning), `bundle.py` (self-contained
+  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `Pins.cs` (unpinning), `TrayMenu.cs` (the tray menu), `bundle.py` (self-contained
   `Verticals` folder, `Verticals-Setup.exe` and a zip) and `installer.iss` (the installer). No updates yet.
 
 The agent picker follows Enjoy's (strings, model artwork).
@@ -168,9 +168,10 @@ own Python and PostgreSQL. What it does, as on a Mac:
   follow Windows' light or dark app mode. Ctrl+plus, Ctrl+minus and Ctrl+0 zoom the page, and the zoom is kept.
 - Closing the window keeps the board, the API and MCP running behind the tray icon, the mascot, faint while the board is
   not up. A click on it opens the window; its menu says whether the board and MCP are running and has Use Verticals in
-  Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`),
-  Open at Login (`HKCU\…\Run`, starting in the tray only) and Quit Verticals, which stops everything as Ctrl-C does.
-  The menu is Windows' own, as the menu bar's is macOS's, light or dark with the taskbar.
+  Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`;
+  a click on a ticked one disconnects it, where the Mac connects again), Open at Login (`HKCU\…\Run`, starting in the
+  tray only) and Quit Verticals, which stops everything as Ctrl-C does. The app draws the menu itself (`TrayMenu.cs`):
+  tall rows, separators across, a narrow column for ticks, Windows 11's corners and shadow, light or dark with the taskbar.
 - `verticals://goal/<id>` links open the task in the window: the app registers the scheme for the user at each start.
 - One copy runs at a time: another start (the taskbar, the Start menu, a shortcut) brings the running one's window back,
   from the tray too. `Verticals.exe --quit` quits the running one and returns once it has stopped.

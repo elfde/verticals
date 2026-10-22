@@ -26,6 +26,7 @@ namespace Verticals
         readonly WebView2 web;
         readonly Label status;
         readonly NotifyIcon tray;
+        readonly TrayMenu menu = new TrayMenu();
         bool serving, quitting, loading, webReady, showsLog;
         string statusLink;
         // A task's link that came while the board was starting is where it opens.
@@ -60,9 +61,12 @@ namespace Verticals
             Controls.Add(web);
             Controls.Add(status);
 
-            tray = new NotifyIcon { Text = "Verticals", ContextMenu = new ContextMenu() };
-            tray.ContextMenu.Popup += (_, __) => BuildMenu(tray.ContextMenu);
-            tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowWindowFront(); };
+            tray = new NotifyIcon { Text = "Verticals" };
+            tray.MouseClick += (_, e) =>
+            {
+                if (e.Button == MouseButtons.Left) ShowWindowFront();
+                else if (e.Button == MouseButtons.Right) menu.Open(MenuEntries(), Cursor.Position, TaskbarDark);
+            };
 
             CreateHandle();
             ApplyTheme();
@@ -388,7 +392,6 @@ namespace Verticals
             var on = dark ? 1 : 0;
             if (DwmSetWindowAttribute(Handle, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, ref on, sizeof(int)) != 0)
                 DwmSetWindowAttribute(Handle, 19 /* the same before Windows 10 20H1 */, ref on, sizeof(int));
-            MenuTheme(TaskbarDark);
             RefreshTrayIcon();
         }
 
@@ -443,52 +446,26 @@ namespace Verticals
 
         // ---------------------------------------------------------------- tray menu
 
-        // The tray menu is Windows' own menu (ContextMenu builds a native one), as the menu bar's is macOS's own: the system's
-        // font, spacing, corners and ticks, and its light or dark look from the taskbar's mode, which the tray belongs to.
-        void BuildMenu(ContextMenu menu)
+        // The tray menu (TrayMenu.cs), in the order of the macOS menu bar's, light or dark with the taskbar it opens from.
+        List<TrayMenu.Entry> MenuEntries()
         {
-            menu.MenuItems.Clear();
-            MenuItem Item(string title, Action action)
-            {
-                var item = new MenuItem(title);
-                if (action != null) item.Click += (_, __) => action(); else item.Enabled = false;
-                return item;
-            }
-            var open = Item("Open Verticals", ShowWindowFront);
-            open.DefaultItem = true;  // bold, and what a click on the icon does
-            menu.MenuItems.Add(open);
-            menu.MenuItems.Add("-");
-            menu.MenuItems.Add(Item(serving ? "Board and MCP are running" : backend.Running ? "Starting…" : "Stopped, see app.log", null));
-            // The click is the consent: nothing is written into Claude Code's or Codex's settings before it. The tick says it was done here.
+            TrayMenu.Entry Item(string text, Action action, bool ticked = false) => new TrayMenu.Entry { Text = text, Action = action, Checked = ticked };
+            // The click is the consent: nothing is written into Claude Code's or Codex's settings before it. The tick says it was
+            // done here, and a click on a ticked one takes the connection away again.
             var ready = serving && File.Exists(backend.HeadersFile);
-            var claude = Item("Use Verticals in Claude Code", ready ? (Action)ConnectClaude : null);
-            claude.Checked = Settings.Flag("InClaudeCode");
-            menu.MenuItems.Add(claude);
-            var codex = Item("Use Verticals in Codex", ready ? (Action)ConnectCodex : null);
-            codex.Checked = Settings.Flag("InCodex");
-            menu.MenuItems.Add(codex);
-            var login = Item("Open at Login", ToggleLogin);
-            login.Checked = Shell.OpensAtLogin && !Shell.LoginTurnedOffInTaskManager;
-            if (Shell.OpensAtLogin && Shell.LoginTurnedOffInTaskManager) login.Text = "Open at Login (allow in Task Manager)";
-            menu.MenuItems.Add(login);
-            menu.MenuItems.Add("-");
-            menu.MenuItems.Add(Item("Quit Verticals", Quit));
-        }
-
-        /// Native menus are drawn light unless the app opts in to dark ones: uxtheme's SetPreferredAppMode and FlushMenuThemes,
-        /// which have no names, only ordinals (Windows 10 1903 and later; elsewhere the menu stays light).
-        static void MenuTheme(bool dark)
-        {
-            try
+            var loginOff = Shell.OpensAtLogin && Shell.LoginTurnedOffInTaskManager;
+            return new List<TrayMenu.Entry>
             {
-                SetPreferredAppMode(dark ? 2 /* ForceDark */ : 3 /* ForceLight */);
-                FlushMenuThemes();
-            }
-            catch (EntryPointNotFoundException) { }
+                Item("Open Verticals", ShowWindowFront),
+                TrayMenu.Entry.Line(),
+                Item(serving ? "Board and MCP are running" : backend.Running ? "Starting…" : "Stopped, see app.log", null),
+                Item("Use Verticals in Claude Code", ready ? (Action)ConnectClaude : null, Settings.Flag("InClaudeCode")),
+                Item("Use Verticals in Codex", ready ? (Action)ConnectCodex : null, Settings.Flag("InCodex")),
+                Item(loginOff ? "Open at Login (allow in Task Manager)" : "Open at Login", ToggleLogin, Shell.OpensAtLogin && !loginOff),
+                TrayMenu.Entry.Line(),
+                Item("Quit Verticals", Quit),
+            };
         }
-
-        [DllImport("uxtheme.dll", EntryPoint = "#135")] static extern int SetPreferredAppMode(int mode);
-        [DllImport("uxtheme.dll", EntryPoint = "#136")] static extern void FlushMenuThemes();
 
         void ToggleLogin()
         {
@@ -504,16 +481,30 @@ namespace Verticals
         void ConnectCodex()
         {
             var python = backend.Python ?? backend.FindPython();
-            if (python == null) { Say("Couldn't connect Codex", "Codex starts Verticals' relay with Python 3.12, which isn't found."); return; }
+            if (python == null && !Settings.Flag("InCodex"))
+            {
+                Say("Couldn't connect Codex", "Codex starts Verticals' relay with Python 3.12, which isn't found.");
+                return;
+            }
             Connect("Codex", "codex", "InCodex", AppLinks.CodexRemoveArguments,
                     AppLinks.CodexAddArguments(python, Path.Combine(backend.Root, "desktop", "chat", "mcp_proxy.py"), backend.MCPURL, backend.HeadersFile),
                     $"New Codex sessions can use the board through the {AppLinks.CodexServer} MCP server while Verticals runs.");
         }
 
-        // Replaces an earlier connection under the same name, then says what happened; the tick is kept for the menu.
+        // Unticked: replaces an earlier connection under the same name and connects. Ticked: takes the connection away (where
+        // the macOS app connects again). Either way it says what happened, and the tick follows.
         async void Connect(string name, string tool, string key, string[] remove, string[] add, string done)
         {
             var env = AgentEnvironment();
+            if (Settings.Flag(key))
+            {
+                var (removed, _) = await Task.Run(() => Agents.Run(tool, remove, env));
+                if (removed == 127) { Say($"Couldn't disconnect {name}", $"The {tool} command isn't installed."); return; }
+                // Already gone from its settings counts as disconnected: the tick only ever was the app's own note.
+                Settings.Set(key, false);
+                Say($"{name} is disconnected", $"New {name} sessions no longer see Verticals.");
+                return;
+            }
             var (code, output) = await Task.Run(() =>
             {
                 Agents.Run(tool, remove, env);
