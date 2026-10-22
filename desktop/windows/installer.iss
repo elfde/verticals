@@ -84,6 +84,8 @@ Filename: "{app}\Verticals.exe"; Description: "{cm:LaunchProgram,Verticals}"; Fl
 
 [UninstallRun]
 Filename: "{app}\Verticals.exe"; Parameters: "--quit"; Flags: runhidden waituntilterminated; RunOnceId: "QuitVerticals"
+; While the exe is still there, as Windows matches a pin only to a program that exists: no dead icon stays on the taskbar.
+Filename: "{app}\Verticals.exe"; Parameters: "--unpin"; Flags: runhidden waituntilterminated; RunOnceId: "UnpinVerticals"
 
 [Code]
 var
