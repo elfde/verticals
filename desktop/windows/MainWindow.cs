@@ -60,8 +60,8 @@ namespace Verticals
             Controls.Add(web);
             Controls.Add(status);
 
-            tray = new NotifyIcon { Text = "Verticals", ContextMenuStrip = new ContextMenuStrip() };
-            tray.ContextMenuStrip.Opening += (_, e) => { BuildMenu(tray.ContextMenuStrip); e.Cancel = false; };
+            tray = new NotifyIcon { Text = "Verticals", ContextMenu = new ContextMenu() };
+            tray.ContextMenu.Popup += (_, __) => BuildMenu(tray.ContextMenu);
             tray.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowWindowFront(); };
 
             CreateHandle();
@@ -388,6 +388,7 @@ namespace Verticals
             var on = dark ? 1 : 0;
             if (DwmSetWindowAttribute(Handle, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, ref on, sizeof(int)) != 0)
                 DwmSetWindowAttribute(Handle, 19 /* the same before Windows 10 20H1 */, ref on, sizeof(int));
+            MenuTheme(TaskbarDark);
             RefreshTrayIcon();
         }
 
@@ -442,37 +443,52 @@ namespace Verticals
 
         // ---------------------------------------------------------------- tray menu
 
-        void BuildMenu(ContextMenuStrip menu)
+        // The tray menu is Windows' own menu (ContextMenu builds a native one), as the menu bar's is macOS's own: the system's
+        // font, spacing, corners and ticks, and its light or dark look from the taskbar's mode, which the tray belongs to.
+        void BuildMenu(ContextMenu menu)
         {
-            menu.Items.Clear();
-            ToolStripMenuItem Item(string title, Action action)
+            menu.MenuItems.Clear();
+            MenuItem Item(string title, Action action)
             {
-                var item = new ToolStripMenuItem(title);
+                var item = new MenuItem(title);
                 if (action != null) item.Click += (_, __) => action(); else item.Enabled = false;
                 return item;
             }
             var open = Item("Open Verticals", ShowWindowFront);
-            open.Font = new Font(open.Font, FontStyle.Bold);
-            menu.Items.Add(open);
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(Item(serving ? "Board and MCP are running" : backend.Running ? "Starting…" : "Stopped, see app.log", null));
+            open.DefaultItem = true;  // bold, and what a click on the icon does
+            menu.MenuItems.Add(open);
+            menu.MenuItems.Add("-");
+            menu.MenuItems.Add(Item(serving ? "Board and MCP are running" : backend.Running ? "Starting…" : "Stopped, see app.log", null));
             // The click is the consent: nothing is written into Claude Code's or Codex's settings before it. The tick says it was done here.
             var ready = serving && File.Exists(backend.HeadersFile);
             var claude = Item("Use Verticals in Claude Code", ready ? (Action)ConnectClaude : null);
             claude.Checked = Settings.Flag("InClaudeCode");
-            claude.ToolTipText = $"Adds Verticals to Claude Code in every folder, as the {AppLinks.ClaudeServer} MCP server (claude mcp add-json --scope user)";
-            menu.Items.Add(claude);
+            menu.MenuItems.Add(claude);
             var codex = Item("Use Verticals in Codex", ready ? (Action)ConnectCodex : null);
             codex.Checked = Settings.Flag("InCodex");
-            codex.ToolTipText = $"Adds Verticals to Codex, as the {AppLinks.CodexServer} MCP server (codex mcp add)";
-            menu.Items.Add(codex);
+            menu.MenuItems.Add(codex);
             var login = Item("Open at Login", ToggleLogin);
             login.Checked = Shell.OpensAtLogin && !Shell.LoginTurnedOffInTaskManager;
             if (Shell.OpensAtLogin && Shell.LoginTurnedOffInTaskManager) login.Text = "Open at Login (allow in Task Manager)";
-            menu.Items.Add(login);
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(Item("Quit Verticals", Quit));
+            menu.MenuItems.Add(login);
+            menu.MenuItems.Add("-");
+            menu.MenuItems.Add(Item("Quit Verticals", Quit));
         }
+
+        /// Native menus are drawn light unless the app opts in to dark ones: uxtheme's SetPreferredAppMode and FlushMenuThemes,
+        /// which have no names, only ordinals (Windows 10 1903 and later; elsewhere the menu stays light).
+        static void MenuTheme(bool dark)
+        {
+            try
+            {
+                SetPreferredAppMode(dark ? 2 /* ForceDark */ : 3 /* ForceLight */);
+                FlushMenuThemes();
+            }
+            catch (EntryPointNotFoundException) { }
+        }
+
+        [DllImport("uxtheme.dll", EntryPoint = "#135")] static extern int SetPreferredAppMode(int mode);
+        [DllImport("uxtheme.dll", EntryPoint = "#136")] static extern void FlushMenuThemes();
 
         void ToggleLogin()
         {
