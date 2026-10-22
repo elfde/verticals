@@ -1,8 +1,9 @@
 /* The agent tag above the field: the agent's mark and a chevron, its menu the agent picker (agent, model, effort, speed,
-   permissions, usage) with "New conversation" on top. */
+   permissions, usage, the chat's colours) with "New conversation" on top. */
 import type { KeyboardEvent } from 'react'
 import { computed, onBeforeUnmount, ref } from '../reactivity'
 import { AppIcon } from './AppIcon'
+import { CHAT_TONES, chatTone, setChatTone } from '../lib/chatTone'
 import { agentChat, agentOf, assetUrl, choose, loadProbe, newThread, refreshAgents, type ModelChoice, type Probe } from '../lib/agentChat'
 import { bindRef, fallthrough, sx } from '../bind'
 import { tracked } from '../tracked'
@@ -143,6 +144,17 @@ export const AgentTag = tracked(function AgentTag(attrs: Record<string, unknown>
                   aria-pressed={p.value === selection.permission} onMouseEnter={hover(p.detail)}
                   onClick={() => choose({ permission: p.value })}>
                   <span>{p.label}</span>
+                </button>
+              ))}
+            </section>
+            <section>
+              <h2>Chat</h2>
+              {CHAT_TONES.map((tone) => (
+                <button key={tone.value} type="button" className="agent-picker__choice" data-chat-tone={tone.value}
+                  aria-pressed={tone.value === chatTone.value} onMouseEnter={hover("Changes the chat's colours at once, in every conversation.")}
+                  onClick={() => setChatTone(tone.value)}>
+                  <i className={`agent-picker__swatch agent-picker__swatch--${tone.value}`} aria-hidden="true"></i>
+                  <span>{tone.label}</span>
                 </button>
               ))}
             </section>

@@ -16,8 +16,8 @@
   margin: 0 auto;
   padding: 0 12px 0 28px;
   border-radius: var(--vt-radius-field);
-  background: #000;
-  color: #fff;
+  background: var(--vt-chat-bg);
+  color: rgb(var(--vt-chat-ink-rgb));
   font: 400 15px/22px var(--font-body);
 }
 .field-notice--bare { padding-right: 28px; }
@@ -49,16 +49,16 @@
   padding: 0 20px;
   border: 0;
   border-radius: 20px;
-  background: #fff;
-  color: #000;
+  background: var(--vt-chat-key-bg);
+  color: var(--vt-chat-key-ink);
   font: 500 15px/22px var(--font-body);
   cursor: pointer;
 }
 /* A press gives a little and comes back (kk-motion); the hover look only where there is a pointer to hover. */
 .field-notice__action { transition: scale 100ms var(--vt-ease-small), background-color var(--vt-dur-fade) ease-out; }
 .field-notice__action:active { scale: .97; }
-@media (hover: hover) and (pointer: fine) { .field-notice__action:hover { background: #ececf0; } }
-.field-notice__action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .field-notice__action:hover { background: var(--vt-chat-key-hover); } }
+.field-notice__action:focus-visible { outline: 2px solid rgb(var(--vt-chat-ink-rgb)); outline-offset: 2px; }
 
 /* The field is hidden while the notice stands where it stands: it fades out as the pill comes in and fades back as the pill
    goes. `visibility` also takes its children out of the pointer's reach (they set `pointer-events` themselves). */

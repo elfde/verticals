@@ -3,6 +3,52 @@
   --vt-goal-wash: 100%;
   --vt-on-black: #fff;
   --vt-on-black-muted: rgb(255 255 255 / 50%);
+  /* The chat: the field, its tags and notices, the balloons. Black by default; lib/chatTone.ts picks another tone. */
+  --vt-chat-bg: #000;
+  --vt-chat-raised: #2b2b2b;
+  --vt-chat-ink-rgb: 255 255 255;
+  --vt-chat-secondary: rgb(255 255 255 / 64%);
+  --vt-chat-muted: rgb(255 255 255 / 50%);
+  --vt-chat-faint: rgb(255 255 255 / 40%);
+  --vt-chat-key-bg: #fff;
+  --vt-chat-key-hover: #ececf0;
+  --vt-chat-key-ink: #000;
+  --vt-chat-mark: brightness(0) invert(1);
+}
+
+/* Soft: a mid grey with light grey type, about 7.5:1 instead of black's 21:1. Light: dark grey type on a pale grey, about
+   9.5:1. Quiet text stays at 4.5:1 or more on both. */
+:root[data-chat-tone='soft'] {
+  --vt-chat-bg: #3e3e42;
+  --vt-chat-raised: #505055;
+  --vt-chat-ink-rgb: 218 218 222;
+  --vt-on-black: #dadade;
+  --vt-on-black-muted: #b0b0b5;
+  --vt-chat-secondary: #bcbcc1;
+  --vt-chat-muted: #b0b0b5;
+  --vt-chat-faint: #8e8e93;
+  --vt-chat-key-bg: #dadade;
+  --vt-chat-key-hover: #c6c6cb;
+  --vt-chat-key-ink: #2c2c2e;
+  --vt-chat-mark: brightness(0) invert(.85);
+}
+:root[data-chat-tone='light'] {
+  --vt-chat-bg: #e6e6e9;
+  --vt-chat-raised: #d6d6db;
+  --vt-chat-ink-rgb: 54 54 58;
+  --vt-on-black: #36363a;
+  --vt-on-black-muted: #5f5f63;
+  --vt-chat-secondary: #555559;
+  --vt-chat-muted: #5f5f63;
+  --vt-chat-faint: #7c7c80;
+  --vt-chat-key-bg: #36363a;
+  --vt-chat-key-hover: #4a4a4f;
+  --vt-chat-key-ink: #f2f2f4;
+  --vt-chat-mark: brightness(0) invert(.21);
+}
+/* A pale ground needs an edge against the white board. */
+:root[data-chat-tone='light'] :is(.circle-field__surface, .circle-tag, .agent-balloon, .field-notice) {
+  box-shadow: 0 0 0 .5px rgb(16 18 32 / 14%);
 }
 
 @media (prefers-color-scheme: dark) {
