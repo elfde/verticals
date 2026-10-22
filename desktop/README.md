@@ -279,7 +279,9 @@ cannot tell, is slow (25 seconds), fails, is Codex or is not there, it is a requ
   folders (`~/verticals`, `~/Developer/verticals`, …). With none, or with Vertical-only access, the task and its documents
   still come and only the pull request waits. An explicitly selected checkout is also the working folder of new
   conversations, and of resumed conversations that used the default chat workspace. Sessions linked from other projects
-  keep their own folder.
+  keep their own folder. Source validation is deferred until code work needs the checkout: it never blocks gateway startup.
+  Morning report writing/checking, account probes and report classification use the private chat workspace, independently
+  of source-folder permissions.
 
 ## Security notes
 

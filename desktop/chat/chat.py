@@ -175,6 +175,11 @@ CONNECTED = "connected"
 MORNING_WRITES = ["doc_create", "doc_save", "doc_link", "evidence_update"]
 # The second agent's seat in the morning flow (morning_flow.py): it reads and answers, and writes nothing.
 CHECKER = "checker"
+
+
+def agent_workdir(chat, connected=False):
+    workspace = getattr(chat, "workspace", None)
+    return workspace if connected and workspace is not None else chat.workdir
 # Every MCP tool a morning turn calls comes to this gateway to be judged, whoever allowed it. The turn keeps the owner's own
 # settings, servers and tools (the sources' tools are theirs), and `--settings` on the command line adds one `ask` rule that
 # matches all of them: `mcp__*` is the docs' glob for every MCP tool. Rule lists from several settings files are combined, and
@@ -500,7 +505,7 @@ class ClaudeAgent:
         # What this conversation is told on top of the board prompt: a morning turn's guide; in any other, the reports'
         # instructions and what its access reaches (docs/design/bug-reports.md). A conversation of another kind (report_kind.py)
         # brings its whole prompt.
-        brief = (CHECK_PROMPT if self.checker else MORNING_PROMPT) if self.connected else (
+        brief = "" if prompt is not None else (CHECK_PROMPT if self.checker else MORNING_PROMPT) if self.connected else (
             report_prompt(getattr(chat, "state_dir", None), self.full) + "\n" + ACCESS_PROMPT[self.full])
         args = [which("claude"), "--print", "--verbose", "--include-partial-messages",
                 "--input-format", "stream-json", "--output-format", "stream-json",
@@ -522,7 +527,7 @@ class ClaudeAgent:
             args += ["--system-prompt-snapshot", "off"]
         env = child_env()
         env.setdefault("MAX_MCP_OUTPUT_TOKENS", MCP_OUTPUT_TOKENS)
-        self.proc = JsonProcess(args, cwd or chat.workdir, env, self.handle, self.exited)
+        self.proc = JsonProcess(args, cwd or agent_workdir(chat, self.connected), env, self.handle, self.exited)
         self.proc.send({"type": "control_request", "request_id": "initialize", "request": {"subtype": "initialize"}})
 
     def signature(self):
@@ -694,7 +699,7 @@ def codex_args(chat, reads=None):
                   "-c", 'mcp_servers.verticals_desktop.default_tools_approval_mode="writes"']
     # Includes system/project layers and plugin servers; fail closed if one escaped the overrides.
     try:
-        result = subprocess.run([which("codex"), *overrides, "mcp", "list", "--json"], cwd=chat.workdir,
+        result = subprocess.run([which("codex"), *overrides, "mcp", "list", "--json"], cwd=agent_workdir(chat, reads is not None),
                                 env=child_env(), capture_output=True, text=True, timeout=20)
     except subprocess.TimeoutExpired as e:
         raise ChatError("Codex connection isolation check timed out; retry when the CLI responds") from e
@@ -714,7 +719,7 @@ class CodexAgent:
 
     def __init__(self, chat, s, settings, resume_id, cwd=None, rebuild_prompt=False):
         self.chat, self.s, self.settings = chat, s, settings
-        self.cwd = cwd or chat.workdir  # `rebuild_prompt` is Claude's: Codex is given its instructions at every thread/resume
+        self.cwd = cwd or agent_workdir(chat, settings.get("sources") == CONNECTED)  # `rebuild_prompt` is Claude's: Codex is given its instructions at every thread/resume
         self.thread_id, self.turn_id = None, None
         self.approvals = {}      # request id -> [(label, response)]
         self.pending_mcp = {}
@@ -1053,12 +1058,18 @@ class Chat:
         for stale in state_dir.glob("chat-mcp*.json"):
             stale.unlink(missing_ok=True)
         # A writable default outside the app; an explicitly selected checkout replaces it.
-        self.workdir = state_dir / "chat-workspace"
-        self.workdir.mkdir(exist_ok=True)
-        self.workdir = find_source(state_dir, explicit_only=True) or self.workdir
+        self.workspace = state_dir / "chat-workspace"
+        self.workspace.mkdir(exist_ok=True)
+        self._workdir = None
         every = float(os.environ.get("VERTICALS_WATCH_SECONDS", WATCH_SECONDS)) if watch_every is None else watch_every
         if every > 0:
             threading.Thread(target=self._watch, args=(every,), daemon=True).start()
+
+    @property
+    def workdir(self):
+        if self._workdir is None:
+            self._workdir = find_source(self.state_dir, explicit_only=True) or self.workspace
+        return self._workdir
 
     # -- the agents' connection to the MCP server
 
@@ -1416,7 +1427,7 @@ class Chat:
         proc = JsonProcess([which("claude"), "--print", "--verbose", "--input-format", "stream-json",
                             "--output-format", "stream-json", "--strict-mcp-config", "--mcp-config",
                             '{"mcpServers":{}}', "--tools", "", "--no-session-persistence"],
-                           self.workdir, child_env(), on_message, lambda *_: done.set())
+                           self.workspace, child_env(), on_message, lambda *_: done.set())
         try:
             proc.send({"type": "control_request", "request_id": "initialize", "request": {"subtype": "initialize"}})
             proc.send({"type": "control_request", "request_id": "usage",
@@ -1438,7 +1449,7 @@ class Chat:
                 **({} if models else {"modelsError": "This agent did not provide a model list."})}
 
     def _probe_codex(self):
-        proc = RpcProcess(codex_args(self), self.workdir,
+        proc = RpcProcess(codex_args(self, reads={}), self.workspace,
                           child_env({"VERTICALS_MCP_URL": self.mcp_url, "VERTICALS_MCP_TOKEN": self.token}),
                           lambda *_: None, lambda msg: None, lambda *_: None)
         try:
@@ -1542,9 +1553,12 @@ class Chat:
                               str(s.id)[:8])
                 # The session lives in the folder it began in; one that began outside Verticals keeps the system prompt it
                 # recorded unless Claude is told to build it again.
-                folder = Path(stored["cwd"]) if resume and stored.get("cwd") and Path(stored["cwd"]).is_dir() else self.workdir
-                if folder == self.state_dir / "chat-workspace":
-                    folder = self.workdir
+                if settings.get("sources") == CONNECTED:
+                    folder = self.workspace
+                else:
+                    folder = Path(stored["cwd"]) if resume and stored.get("cwd") and Path(stored["cwd"]).is_dir() else self.workdir
+                    if folder == self.workspace:
+                        folder = self.workdir
                 agent = AGENT_CLASSES[provider](self, s, settings, resume, cwd=folder,
                                                 rebuild_prompt=bool(resume and stored.get("external")))
                 s.agent, fresh = agent, resume is None
