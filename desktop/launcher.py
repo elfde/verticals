@@ -60,12 +60,6 @@ def _port(name, default):
 UI_PORT, API_PORT, MCP_PORT, PG_PORT = _port("UI", 8288), _port("API", 8299), _port("MCP", 8281), _port("PG", 55539)
 UI_ORIGINS = {f"http://127.0.0.1:{UI_PORT}", f"http://localhost:{UI_PORT}"}
 UI_HOSTS = {f"127.0.0.1:{UI_PORT}", f"localhost:{UI_PORT}"}
-# Other names a browser reaches the UI by, such as verticals.localhost forwarded from port 80, comma-separated with their
-# port when it is not 80. The gateway holds the token and answers only the hosts it knows (DNS rebinding), so each one is
-# named, never a wildcard.
-for _host in filter(None, (h.strip() for h in os.environ.get("VERTICALS_DESKTOP_HOSTS", "").split(","))):
-    UI_HOSTS.add(_host)
-    UI_ORIGINS.add(f"http://{_host}")
 # VERTICALS_DESKTOP_LAN=1 opens the UI to the home network: the gateway listens on every address, and a phone may come by
 # any IP the computer has today on the UI port. An address, unlike a name, can't be rebound to another site.
 LAN = os.environ.get("VERTICALS_DESKTOP_LAN") == "1"
