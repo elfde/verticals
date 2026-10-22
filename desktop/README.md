@@ -172,7 +172,8 @@ own Python and PostgreSQL. What it does, as on a Mac:
   Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`;
   a click on a ticked one disconnects it, where the Mac connects again), Open at Login (`HKCU\…\Run`, starting in the
   tray only) and Quit Verticals, which stops everything as Ctrl-C does. The app draws the menu itself (`TrayMenu.cs`):
-  tall rows, separators across, a narrow column for ticks, Windows 11's corners and shadow, light or dark with the taskbar.
+  tall rows, separators across, a narrow column for ticks, continuous corners (a superellipse, like the icon's tile) and
+  a soft shadow of its own, light or dark with the taskbar.
 - `verticals://goal/<id>` links open the task in the window: the app registers the scheme for the user at each start.
 - One copy runs at a time: another start (the taskbar, the Start menu, a shortcut) brings the running one's window back,
   from the tray too. `Verticals.exe --quit` quits the running one and returns once it has stopped.
