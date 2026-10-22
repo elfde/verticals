@@ -158,7 +158,7 @@ def pg_env():
     return env
 
 
-def start_database(pg, cfg, env):
+def start_database(pg, cfg):
     port_free(PG_PORT)
     if not PGDATA.exists():
         log("initialising the database")
@@ -173,6 +173,9 @@ def start_database(pg, cfg, env):
     run([pg / "pg_ctl", "-D", PGDATA, "-l", STATE / "postgres.log", "-w", "start", "-o",
          f"-h 127.0.0.1 -p {PG_PORT} -k '' -c shared_buffers=32MB -c max_connections=30"],
         stdout=subprocess.DEVNULL, env=pg_env())
+
+
+def prepare_database(env):
     run([PYTHON, "-c", """import os, psycopg
 from psycopg.conninfo import make_conninfo
 with psycopg.connect(make_conninfo(os.environ['VERTICALS_DATABASE_URL'], dbname='postgres'), autocommit=True) as c:
@@ -490,8 +493,9 @@ def main():
     signal.signal(signal.SIGTERM, stop_on_signal)
     procs, db_started, gateway, chat = [], False, None, None
     try:
-        start_database(pg, cfg, env)
+        start_database(pg, cfg)
         db_started = True
+        prepare_database(env)
         for name, argv in (("api", [PYTHON, "-m", "verticals.api.app"]),
                            # The MCP server is told where the app keeps the sessions of tasks (its link tool tells the app).
                            ("mcp", [PYTHON, "-m", "verticals.mcp.server", "--transport", "http",
@@ -500,9 +504,10 @@ def main():
             procs.append(subprocess.Popen([str(a) for a in argv], cwd=APP, env=env, stdout=logfile,
                                           stderr=subprocess.STDOUT, start_new_session=True))
         chat = Chat(STATE, f"http://127.0.0.1:{MCP_PORT}/mcp", cfg["token"], api_url=f"http://127.0.0.1:{API_PORT}")
-        gateway = ThreadingHTTPServer(("127.0.0.1", UI_PORT), make_gateway(cfg["token"], chat))
-        gateway.daemon_threads = True
-        threading.Thread(target=gateway.serve_forever, daemon=True).start()
+        server = ThreadingHTTPServer(("127.0.0.1", UI_PORT), make_gateway(cfg["token"], chat))
+        server.daemon_threads = True
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        gateway = server  # only a served server can be shut down; before that shutdown() would wait forever
         wait_healthy()
         write_mcp_config(cfg["token"])
         print(f"\nVerticals desktop is up\n  UI:  http://127.0.0.1:{UI_PORT}/\n  {mcp_instructions()}\n"
@@ -513,6 +518,9 @@ def main():
     except KeyboardInterrupt:
         log("stopping")
     finally:
+        # Once stopping, another SIGTERM or Ctrl-C must not cut the stop short and leave the database running.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         if gateway:
             gateway.shutdown()
         if chat:
