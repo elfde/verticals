@@ -52,10 +52,8 @@
 .agent-picker__swatch::after { content: ''; position: absolute; left: 7px; top: 4px; width: 2px; height: 8px; border-radius: 1px; }
 .agent-picker__swatch--black { background: #000; }
 .agent-picker__swatch--black::after { background: #fff; }
-.agent-picker__swatch--soft { background: #3e3e42; }
-.agent-picker__swatch--soft::after { background: #dadade; }
-.agent-picker__swatch--light { background: #e6e6e9; }
-.agent-picker__swatch--light::after { background: #36363a; }
+.agent-picker__swatch--soft { background: #000; }
+.agent-picker__swatch--soft::after { background: #e5e5e5; }
 .agent-picker__choice small { display: block; color: rgb(var(--vt-text-rgb, 0 0 0) / 45%); font-size: 11px; }
 .agent-picker__choice:hover:not(:disabled) { background: rgb(var(--vt-text-rgb, 0 0 0) / 5%); }
 .agent-picker__choice[aria-pressed='true'] { font-weight: 600; }

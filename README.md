@@ -18,7 +18,7 @@ Most of what you see we still don't like, so tell us what you hate. For now, exp
 It runs on your Mac and keeps your data there. You need Claude Code or Codex, signed in.
 The light and dark appearance follows macOS automatically, including changes while the app is open.
 Dark appearance uses soft grey text while keeping task and document text readable.
-The agent chat is black by default; under Chat in the agent menu it can be soft grey or light instead.
+The agent chat is black by default; under Chat in the agent menu Soft gives it light grey type instead of white.
 The app is in [Releases](https://github.com/konstantinopolskii/verticals/releases); it still
 carries its old name, Verticals. Open source under the GNU Affero General Public License v3.0,
 see [License](#license).

@@ -1,14 +1,13 @@
-/* The chat's colours (docs/design/chat-tone.md): black, the default, or a softer grey or light ground for eyes that tire
-   on white type over black. Picked in the agent menu, kept in this browser, and drawn by theme.css from
+/* The chat's colours (docs/design/chat-tone.md): black with white type, the default, or soft: black with light grey type, for eyes
+   that tire on white over black. Picked in the agent menu, kept in this browser, and drawn by theme.css from
    `data-chat-tone` on the root. */
 import { reactive } from '../reactivity'
 
-export type ChatTone = 'black' | 'soft' | 'light'
+export type ChatTone = 'black' | 'soft'
 
 export const CHAT_TONES: readonly { value: ChatTone; label: string }[] = [
   { value: 'black', label: 'Black' },
   { value: 'soft', label: 'Soft' },
-  { value: 'light', label: 'Light' },
 ]
 
 const KEY = 'verticals:chat-tone'
