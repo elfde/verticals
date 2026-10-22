@@ -8,6 +8,7 @@
 //   Verticals.exe --hidden              tray only (what Open at Login starts)
 //   Verticals.exe verticals://goal/<id> open that task
 //   Verticals.exe --quit                quit the running copy as its Quit does, and return once it has stopped
+//   Verticals.exe --unpin               take Verticals off the taskbar and the Start menu (the uninstaller runs it)
 //   Verticals.exe --state-dir <path>    keep the data elsewhere (tests), else VERTICALS_DESKTOP_STATE, else %LOCALAPPDATA%\Verticals
 using System;
 using System.IO;
@@ -27,6 +28,7 @@ namespace Verticals
         [STAThread]
         static void Main(string[] args)
         {
+            if (args.Contains("--unpin")) { Pins.Unpin(); return; }
             FreshUserVariables();
             var explicitState = Option(args, "--state-dir");
             var stateDir = explicitState

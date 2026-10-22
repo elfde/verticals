@@ -47,7 +47,7 @@ launcher has its own ports, database, state directory and UI build.
   (self-contained `Verticals.app` + `.dmg`).
 - `windows/` — `Verticals.exe` for Windows (see Windows below): `MainWindow.cs` (the window, WebView2, and the tray icon
   with its menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin of `AppLinks.swift`), `Agents.cs`
-  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `bundle.py` (self-contained
+  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `Pins.cs` (unpinning), `bundle.py` (self-contained
   `Verticals` folder, `Verticals-Setup.exe` and a zip) and `installer.iss` (the installer). No updates yet.
 
 The agent picker follows Enjoy's (strings, model artwork).
@@ -232,8 +232,10 @@ that PostgreSQL and imports the API and the MCP server with a bare PATH, so noth
 `Verticals-Setup.exe` installs for the current user without admin rights into `%LOCALAPPDATA%\Programs\Verticals`, adds
 Verticals to the Start menu (a desktop shortcut if chosen) and registers `verticals://` links. Where Windows 10 lacks
 WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals quits it first with `--quit`, so its
-database stops cleanly, then replaces the whole folder. Uninstalling (Settings → Apps) quits it too and removes the app,
-its links and its login item; the data in `%LOCALAPPDATA%\Verticals` stays. The installer is not signed: Windows
+database stops cleanly, then replaces the whole folder. Uninstalling (Settings → Apps) quits it too, takes it off the
+taskbar and the Start menu where it was pinned (`Verticals.exe --unpin`, while the exe is still there: Windows matches a
+pin only to a program that exists), and removes the app, its links and its login item; the data in
+`%LOCALAPPDATA%\Verticals` stays. The installer is not signed: Windows
 SmartScreen asks once, under More info → Run anyway.
 
 ## Releases and updates
