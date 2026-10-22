@@ -243,7 +243,8 @@ matching `.dmg` from the release page.
 ## Reports
 
 Something is wrong, or could be better: pictures dropped on the window (or pasted into the field) wait above the field, and with
-them there what you type says what you see and what you want. ↵ makes a report (docs/design/bug-reports.md): a document with
+them there what you type says what you see and what you want. With the conversation open they are no report: ↵ sends them to the
+agent with your words, the gateway keeping them in `chat-pictures/` of the state folder (docs/design/chat-pictures.md). Otherwise ↵ makes a report (docs/design/bug-reports.md): a document with
 your words, the pictures and the version, and a task with no date that holds it. There is nothing to pick: the agent tells
 which kind it is from your words, once, and gets the words alone (`chat/report_kind.py` asks the Claude Code the chat runs, in a
 conversation nobody sees, with no tools and no MCP servers; the pictures and the logs never go to a model). In the same answer it

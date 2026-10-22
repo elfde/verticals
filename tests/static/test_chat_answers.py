@@ -86,7 +86,7 @@ class _Agent:
     def signature(self):
         return {}
 
-    def send(self, text):
+    def send(self, text, pictures=()):
         self.seen.append(list(self.standin.routes()))
         self.session.turn_done(False, "")
 

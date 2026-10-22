@@ -5,7 +5,8 @@ way Claude does, with the connection the gateway wrote for this conversation: `-
 `[ask:NAME]` asks permission for one of the writes in ASKS, shaped as the real tool is called, `[make:ID|Title]` makes the
 goal ID by calling `create` and gets the words Verticals' server answers it with, `[slow]` works for a second and a half,
 `[wait:N]` works for N seconds, `[long]` answers in three paragraphs, `[fail]` ends the turn with an error, `[say]` answers
-with the words after it, and `[context]` with the app context Verticals sent. A message that opens with "Check again" (a
+with the words after it, `[context]` with the app context Verticals sent, and `[pictures]` with how many pictures came with
+the words and of which kind ("I see 1 picture: image/jpeg"). A message that opens with "Check again" (a
 document's comments and edits handed over, web/src/lib/checkAgain.ts) works for a second and a half, which is the time a test
 has to rewrite the document as the real agent would, then answers in two lines. A message that opens with "Improve it" (a
 report's design asked for, web/src/lib/reportActions.ts) is answered as the real agent answers it through Verticals' tools: it
@@ -348,6 +349,9 @@ for msg in iter(read, None):
         out({"type": "result", "is_error": True, "result": SIGNED_OUT})
         continue
     words = text.split("</app_context>")[-1].strip()
+    if "[pictures]" in words:
+        kinds = [block["source"]["media_type"] for block in msg["message"]["content"] if block.get("type") == "image"]
+        words = f"[say] I see {len(kinds)} picture{'' if len(kinds) == 1 else 's'}: {', '.join(kinds) or 'none'}"
     if "[context]" in words:
         words = "[say] " + text.split("<app_context>")[-1].split("</app_context>")[0].strip()
     said = scripted(words, text) if SCRIPTED else None

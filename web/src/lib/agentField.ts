@@ -13,14 +13,15 @@ import { REPLAN_ASK, type CarriedPlan } from './replan'
 import { closeWindows, frontWindow, openWindow } from './windows'
 import { takeSelection } from './pageSelection'
 import { makeReport } from './report'
-import { pictures, reporting } from './reportPictures'
+import { pictures, reporting, takePictures } from './reportPictures'
 import { nextTick, onMounted, onUnmounted, type Ref } from '../reactivity'
 
 export function useAgentField(searchBar: Ref<SearchBarApi | null>) {
   /* The goal conversation Discuss is opening; a message sent meanwhile waits for it. */
   let goalOpening: Promise<void> | null = null
-  /* The field's words: with pictures waiting they are a report; in the Inbox they are written down; otherwise they go
-     to the agent, with what is selected on the page, and while moving a goal they start a task about the move. */
+  /* The field's words: with pictures waiting and no conversation open they are a report; in the Inbox they are written down;
+     otherwise they go to the agent, with the pictures waiting and what is selected on the page, and while moving a goal they
+     start a task about the move. */
   async function onSubmit(text: string): Promise<void> {
     if (reporting.value) {
       if (pictures.sending) return
@@ -43,17 +44,18 @@ export function useAgentField(searchBar: Ref<SearchBarApi | null>) {
       agentChat.open = true
       agentChat.engaged = true
       commandFilter.text = ''
-      void send(text, { move })
+      void send(text, { move }, {}, takePictures())
       return
     }
     agentChat.open = true
     agentChat.engaged = true
     commandFilter.text = ''
+    const files = takePictures()
     ;(document.activeElement as HTMLElement | null)?.blur()
     if (goalOpening) await goalOpening
     const front = frontWindow.value
     if (front?.kind === 'goal' && currentThread.value?.goal?.id !== front.target) await openForGoal({ id: front.target, title: front.title })
-    void send(text, selection ? { selection } : {})
+    void send(text, selection ? { selection } : {}, {}, files)
   }
   function onVeilClick(): void {
     agentChat.open = false

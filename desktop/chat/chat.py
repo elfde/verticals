@@ -8,6 +8,8 @@ it the conversation so far.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import logging
 import os
@@ -220,6 +222,13 @@ def closes_only(tool_input):
 
 
 MAX_EVENTS = 5000
+# Pictures that go to the agent with your words (docs/design/chat-pictures.md): the kinds both agents read, as many as a message
+# may carry, and the most base64 one may take (Claude refuses a picture past 5 MB).
+PICTURE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
+PICTURE_MEDIA = {suffix: media for media, suffix in PICTURE_TYPES.items()}
+PICTURE_NAME = re.compile(r"[0-9a-f]{32}\.(png|jpg|webp|gif)")
+MAX_PICTURES = 20
+MAX_PICTURE_CHARS = 5_000_000
 WATCH_SECONDS = 2  # how often the files of the sessions of tasks are looked at (a stat each)
 MISSING_SECONDS = 20  # how long a session with no file is left alone before it is searched for again
 HANDOFF_CHARS = 12000
@@ -528,10 +537,12 @@ class ClaudeAgent:
     def signature(self):
         return self.settings
 
-    def send(self, text):
+    def send(self, text, pictures=()):
         self.streamed = False
+        content = [{"type": "image", "source": {"type": "base64", "media_type": PICTURE_MEDIA[path.suffix],
+                                                "data": base64.b64encode(path.read_bytes()).decode()}} for path in pictures]
         self.proc.send({"type": "user", "session_id": self.session_id,
-                        "message": {"role": "user", "content": [{"type": "text", "text": text}]}})
+                        "message": {"role": "user", "content": [*content, {"type": "text", "text": text}]}})
 
     def interrupt(self):
         self.proc.send({"type": "control_request", "request_id": str(uuid.uuid4()), "request": {"subtype": "interrupt"}})
@@ -754,12 +765,13 @@ class CodexAgent:
         # Codex takes model, effort, speed and permissions per turn: only the agent itself matters.
         return {}
 
-    def send(self, text):
+    def send(self, text, pictures=()):
         settings = self.settings = self.s.settings
         self.pending_mcp.clear()
         params = {**codex_policy(codex_mode(settings), str(self.cwd)),
                   "serviceTier": "fast" if settings.get("fast") else None, "threadId": self.thread_id,
-                  "input": [{"type": "text", "text": text, "text_elements": []}]}
+                  "input": [*({"type": "localImage", "path": str(path)} for path in pictures),
+                            {"type": "text", "text": text, "text_elements": []}]}
         if settings.get("model"):
             params["model"] = settings["model"]
         if settings.get("effort") and settings["effort"] != "default":
@@ -1038,6 +1050,7 @@ class Chat:
         self.sessions: dict[str, Session] = {}
         self.lock = threading.Lock()
         self.store_path = state_dir / "chat-sessions.json"
+        self.pictures_dir = state_dir / "chat-pictures"
         self.models, self.probes = {}, {}
         # What the sessions of tasks look like on disk (docs/design/task-sessions.md): where each file was found, its size and
         # time at the last look, and the store as it was when its own file last changed.
@@ -1469,28 +1482,33 @@ class Chat:
 
     # -- turns
 
-    def send(self, id, text, context=None, settings=None, mode="send"):
+    def send(self, id, text, context=None, settings=None, mode="send", pictures=None):
         try:
-            self._send(id, text, context, settings, mode)
+            self._send(id, text, context, settings, mode, pictures)
         except ChatError as e:
             self.log.warning("refused %s session=%s", clip(e), str(id)[:8])
             raise
 
-    def _send(self, id, text, context, settings, mode):
+    def _send(self, id, text, context, settings, mode, pictures=None):
         if not isinstance(text, str) or not text.strip():
             raise ChatError("Empty message")
         s = self.session(id)
         settings = clean_settings(settings)
+        names = self.keep_pictures(pictures)
+        if names:
+            # The queue and a sign-in's retry keep the message as (text, context, settings): the pictures ride in its context.
+            context = {**(context if isinstance(context, dict) else {}), "pictures": names}
         goal = context.get("goal") if isinstance(context, dict) else None
         if isinstance(goal, dict) and isinstance(goal.get("id"), str) and len(goal["id"]) < 100:
             self.update(id, goal={"id": goal["id"], "title": str(goal.get("title", ""))[:300]})
         if not which(settings["provider"]):
             raise ChatError(f"{AGENTS[settings['provider']]['label']} is not installed.")
-        self.log.info("send provider=%s permission=%s morning=%s chars=%d mode=%s queued=%s session=%s",
-                      settings["provider"], settings["permission"], "sources" in settings, len(text), mode, s.running, str(id)[:8])
+        self.log.info("send provider=%s permission=%s morning=%s chars=%d pictures=%d mode=%s queued=%s session=%s",
+                      settings["provider"], settings["permission"], "sources" in settings, len(text), len(names), mode,
+                      s.running, str(id)[:8])
         s.emit({"t": "user", "text": text, "provider": settings["provider"], "model": settings.get("model"),
-                "effort": settings.get("effort")})
-        self.record(id, "user", text)
+                "effort": settings.get("effort"), **({"pictures": names} if names else {})})
+        self.record(id, "user", text + (f"\n[{len(names)} picture{'s' if len(names) > 1 else ''} attached]" if names else ""))
         if self.signin.holds(s.id):
             # Behind a sign-in every message waits, in the order sent, and goes after the one that failed (agent_signin.py).
             s.queue.append((text, context, settings))
@@ -1505,6 +1523,40 @@ class Chat:
                 s.queue.append((text, context, settings))
             return
         threading.Thread(target=self.start_turn, args=(s, text, context, settings), daemon=True).start()
+
+    def keep_pictures(self, pictures):
+        """Pictures sent with a message, as data URLs, kept as files under their hash: the agent reads them from there, the page
+        shows them in your balloon (picture_path), and the same picture sent twice is one file. Their names, in order."""
+        if not pictures:
+            return []
+        if not isinstance(pictures, list) or len(pictures) > MAX_PICTURES:
+            raise ChatError(f"A message carries {MAX_PICTURES} pictures at most.")
+        names = []
+        for url in pictures:
+            head, _, data = url.partition(",") if isinstance(url, str) else ("", "", "")
+            suffix = PICTURE_TYPES.get(head.removeprefix("data:").removesuffix(";base64")) if head.endswith(";base64") else None
+            if not suffix or not data or len(data) > MAX_PICTURE_CHARS:
+                raise ChatError("A picture could not be sent: it is not a PNG, JPEG, WebP or GIF of 5 MB or less.")
+            try:
+                raw = base64.b64decode(data, validate=True)
+            except ValueError:
+                raise ChatError("A picture could not be sent: its data is broken.") from None
+            name = hashlib.sha256(raw).hexdigest()[:32] + suffix
+            path = self.pictures_dir / name
+            if not path.exists():
+                self.pictures_dir.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_suffix(".part")
+                tmp.write_bytes(raw)
+                tmp.replace(path)
+            names.append(name)
+        return names
+
+    def picture_path(self, name):
+        """A kept picture by its name, or None: a name is only ever a hash and a known kind, so nothing else is reached."""
+        if not isinstance(name, str) or not PICTURE_NAME.fullmatch(name):
+            return None
+        path = self.pictures_dir / name
+        return path if path.is_file() else None
 
     def start_turn(self, s: Session, text, context, settings, stage=None):
         # A later turn of the morning report (the fixing turn, `stage`) goes on with the answer the ask began: its writes join
@@ -1566,7 +1618,8 @@ class Chat:
                 s.flow, s.holding = flow, [] if flow else None
             if stage is None:
                 self.open_answer(s.id, s.answer)  # before the agent hears the words: every call it makes after is this answer's
-            agent.send(body + text)
+            names = context.get("pictures") if isinstance(context, dict) else None
+            agent.send(body + text, [self.pictures_dir / name for name in names or () if PICTURE_NAME.fullmatch(name)])
         except (ChatError, OSError) as e:
             s.flow, s.holding = None, None
             if self.signin.signed_out(s, str(e)):

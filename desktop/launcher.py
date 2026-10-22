@@ -54,6 +54,7 @@ UI_ORIGINS = {f"http://127.0.0.1:{UI_PORT}", f"http://localhost:{UI_PORT}"}
 UI_HOSTS = {f"127.0.0.1:{UI_PORT}", f"localhost:{UI_PORT}"}
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
          ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json",
+         ".jpg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif",
          ".woff2": "font/woff2", ".woff": "font/woff", ".mp3": "audio/mpeg", ".wav": "audio/wav",
          ".ogg": "audio/ogg", ".webmanifest": "application/manifest+json", ".txt": "text/plain"}
 HOP = {"connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade",
@@ -305,6 +306,10 @@ def make_gateway(token, chat):
                 return
             if self.command == "GET" and path == "/__chat/events":
                 return self.chat_events()
+            if self.command == "GET" and path.startswith("/__chat/pictures/"):
+                # A picture you sent the agent, in your balloon (docs/design/chat-pictures.md).
+                picture = chat.picture_path(path.removeprefix("/__chat/pictures/"))
+                return self.static(picture) if picture else self.deny(404, "not found")
             if self.command == "GET" and path == "/__chat/agents":
                 return self.send_json({"agents": chat.agents()})
             if self.command == "GET" and path == "/__chat/busy":
@@ -329,7 +334,7 @@ def make_gateway(token, chat):
                 action = path.removeprefix("/__chat/")
                 if action == "send":
                     chat.send(body.get("session"), body.get("text"), body.get("context"), body.get("settings"),
-                              "now" if body.get("mode") == "now" else "send")
+                              "now" if body.get("mode") == "now" else "send", body.get("pictures"))
                 elif action == "permission":
                     chat.decide(body.get("session"), body.get("requestId"), body.get("value"))
                 elif action == "answers":

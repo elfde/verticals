@@ -4,7 +4,7 @@ Something is wrong, or could be better: the person drops pictures on the field a
 
 ## Behaviour
 
-- **Pictures stack above the field,** as a moved task does (`MovingStack.tsx`), and the field widens to them. Past a few they overlap, so many still fit, and the one under the pointer lifts out, bigger. There is no fixed cap.
+- **Pictures stack above the field,** as a moved task does (`MovingStack.tsx`), and the field widens to them. With the conversation open they are not a report: they go to the agent with the words (`chat-pictures.md`). Past a few they overlap, so many still fit, and the one under the pointer lifts out, bigger. There is no fixed cap.
 - **The report comes first:** a document with the pictures, what the person did and expected, the app's version, and the last lines of the app's and the agent's logs. Its task is made with it, and the report is the task's first document. The answer shows both as chips (`agent-chips.md`). A bug also carries the last lines of the app's and the agent's logs; a request carries none.
 - **The task is named by its result,** as the board names its tasks ("A card dragged to Friday stays there"), in the language of the person's words and in at most 8 words, by the same quiet call that tells the kind. The report keeps the person's words as they wrote them. With no answer the task takes their words.
 - **An agent reads a report without its pictures:** every MCP read of a document or a goal returns each embedded picture as a short placeholder (`[picture 1]`) and every word as it is; a placeholder it keeps in a saved text is the picture again. The person's own view keeps the pictures, and no preview of a document (a chip's page, the Documents desk) shows a picture's data.
