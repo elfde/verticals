@@ -170,6 +170,7 @@ own Python and PostgreSQL. What it does, as on a Mac:
   not up. A click on it opens the window; its menu says whether the board and MCP are running and has Use Verticals in
   Claude Code, Use Verticals in Codex (the same connections as the menu bar's, the token read from `mcp-headers.json`),
   Open at Login (`HKCU\…\Run`, starting in the tray only) and Quit Verticals, which stops everything as Ctrl-C does.
+  The menu is Windows' own, as the menu bar's is macOS's, light or dark with the taskbar.
 - `verticals://goal/<id>` links open the task in the window: the app registers the scheme for the user at each start.
 - One copy runs at a time: another start (the taskbar, the Start menu, a shortcut) brings the running one's window back,
   from the tray too. `Verticals.exe --quit` quits the running one and returns once it has stopped.
@@ -232,12 +233,12 @@ that PostgreSQL and imports the API and the MCP server with a bare PATH, so noth
 
 `Verticals-Setup.exe` installs for the current user without admin rights into `%LOCALAPPDATA%\Programs\Verticals`, adds
 Verticals to the Start menu and, if chosen, the desktop (two checkboxes, the first on) and registers `verticals://`
-links. Where Windows 10 lacks WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals quits it first with `--quit`, so its
-database stops cleanly, then replaces the whole folder. Uninstalling (Settings → Apps) quits it too, takes it off the
-taskbar and the Start menu where it was pinned (`Verticals.exe --unpin`, while the exe is still there: Windows matches a
-pin only to a program that exists), and removes the app, its links and its login item; the data in
-`%LOCALAPPDATA%\Verticals` stays. The installer is not signed: Windows
-SmartScreen asks once, under More info → Run anyway.
+links. Where Windows 10 lacks WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals
+quits it first with `--quit`, so its database stops cleanly, then replaces the whole folder. Uninstalling (Settings →
+Apps) quits it too, takes it off the taskbar and the Start menu where it was pinned (`Verticals.exe --unpin`, while the
+exe is still there: Windows matches a pin only to a program that exists), and removes the app, its links and its login
+item; the data in `%LOCALAPPDATA%\Verticals` stays. The installer is not signed: Windows SmartScreen asks once, under
+More info → Run anyway.
 
 ## Releases and updates
 
