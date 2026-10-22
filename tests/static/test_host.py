@@ -41,7 +41,8 @@ def test_only_host_looks_at_the_system() -> None:
     leaks = []
     for folder in ("verticals", "tools", "desktop"):
         for path in (REPO / folder).rglob("*.py"):
-            if HOST in path.parents:
+            # Build output (desktop/dist holds a bundled app with Python's own library) is not the repository's code.
+            if HOST in path.parents or "dist" in path.relative_to(REPO).parts:
                 continue
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and \

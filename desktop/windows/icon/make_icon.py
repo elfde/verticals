@@ -1,9 +1,10 @@
-"""The Windows app icon, AppIcon.ico: the macOS icon's tile, circle and line (desktop/macos/icon/make_icon.py, imported, so
-the two never drift apart), cropped to the tile's edges without Apple's grid margin and shadow, the way Windows draws icons
-and the way the web's favicon is cut. Each size is rendered on its own, so the line keeps its minimum width at 16 px.
+"""The Windows app icons, AppIcon.ico and AppIcon-dev.ico (yellow, for `bundle.py --dev`): the macOS icons' tile, circle
+and line (desktop/macos/icon/make_icon.py, imported, so the two never drift apart), cropped to the tile's edges without
+Apple's grid margin and shadow, the way Windows draws icons and the way the web's favicon is cut. Each size is rendered
+on its own, so the line keeps its minimum width at 16 px.
 
-Usage: .venv\\Scripts\\python.exe desktop\\windows\\icon\\make_icon.py   -> AppIcon.ico next to this file, which the exe
-carries (Verticals.csproj). Renders through Chrome (Playwright's chrome channel); packs the .ico with the standard library."""
+Usage: .venv\\Scripts\\python.exe desktop\\windows\\icon\\make_icon.py   -> both next to this file; the exe carries one
+(Verticals.csproj). Renders through Chrome (Playwright's chrome channel); packs the .ico with the standard library."""
 import importlib.util
 import pathlib
 import struct
@@ -17,7 +18,7 @@ spec.loader.exec_module(mac)
 SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
 
 
-def svg(px, look='AppIcon'):
+def svg(px, look):
     off = (mac.CANVAS - mac.TILE) / 2
     tile, mark = mac.mascot(look, mac.TILE / px)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="{off:g} {off:g} {mac.TILE} {mac.TILE}" width="{px}" height="{px}">
@@ -61,20 +62,21 @@ RASTER = """async ([source, px]) => {
 
 def main():
     from playwright.sync_api import sync_playwright
-    images = []
     with sync_playwright() as pw:
         browser = pw.chromium.launch(channel='chrome')  # the installed Chrome, as the macOS script uses
         page = browser.new_page(device_scale_factor=1)
-        for px in SIZES:
-            if px >= 256:
-                page.set_viewport_size({'width': px, 'height': px})
-                page.set_content(f'<html><body style="margin:0;background:transparent">{svg(px)}</body></html>')
-                images.append((px, page.locator('svg').screenshot(omit_background=True)))
-            else:
-                images.append((px, dib(px, bytes(page.evaluate(RASTER, [svg(px), px])))))
+        for look in mac.LOOKS:  # AppIcon, and AppIcon-dev in yellow for dev builds
+            images = []
+            for px in SIZES:
+                if px >= 256:
+                    page.set_viewport_size({'width': px, 'height': px})
+                    page.set_content(f'<html><body style="margin:0;background:transparent">{svg(px, look)}</body></html>')
+                    images.append((px, page.locator('svg').screenshot(omit_background=True)))
+                else:
+                    images.append((px, dib(px, bytes(page.evaluate(RASTER, [svg(px, look), px])))))
+            (HERE / f'{look}.ico').write_bytes(ico(images))
+            print(HERE / f'{look}.ico')
         browser.close()
-    (HERE / 'AppIcon.ico').write_bytes(ico(images))
-    print(HERE / 'AppIcon.ico')
 
 
 if __name__ == '__main__':

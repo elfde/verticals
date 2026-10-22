@@ -25,6 +25,8 @@ namespace Verticals
         public string Python { get; private set; }
         public Process Process { get; private set; }
         public bool Running => Process != null && !Process.HasExited;
+        /// An installed app: Python and PostgreSQL ship beside the exe. A build in the repository has neither.
+        public bool Bundled => Root != null && File.Exists(Path.Combine(Root, "python", "python.exe")) && Directory.Exists(Path.Combine(Root, "site"));
         public event Action<int> Exited;
         readonly int MCPPort;
         StreamWriter log;
@@ -87,6 +89,16 @@ namespace Verticals
             };
             foreach (var pair in agentEnvironment) start.EnvironmentVariables[pair.Key] = pair.Value;
             start.EnvironmentVariables["VERTICALS_DESKTOP_STATE"] = StateDir;
+            if (Bundled)
+            {
+                // The installed app carries Python with every dependency and PostgreSQL (desktop/windows/bundle.py), as
+                // Verticals.app does: no virtual environment to build, and nothing written into the app's folder.
+                start.EnvironmentVariables["VERTICALS_DESKTOP_PYTHONPATH"] = Root + ";" + Path.Combine(Root, "site");
+                var bindir = Path.Combine(Root, "pg", "BINDIR");
+                start.EnvironmentVariables["VERTICALS_PG_BIN"] = File.Exists(bindir) ? Path.Combine(Root, "pg", File.ReadAllText(bindir).Trim()) : "";
+                start.EnvironmentVariables["PYTHONDONTWRITEBYTECODE"] = "1";
+                start.EnvironmentVariables["PYTHONNOUSERSITE"] = "1";
+            }
             Directory.CreateDirectory(StateDir);
             log = new StreamWriter(new FileStream(LogPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite), new UTF8Encoding(false)) { AutoFlush = true };
             var process = new Process { StartInfo = start, EnableRaisingEvents = true };

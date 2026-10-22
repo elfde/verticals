@@ -11,7 +11,9 @@
     <RootNamespace>Verticals</RootNamespace>
     <Product>Verticals</Product>
     <Version>0.2</Version>
-    <ApplicationIcon>icon\AppIcon.ico</ApplicationIcon>
+    <!-- A dev bundle (bundle.py's dev flag) passes icon\AppIcon-dev.ico, the yellow one, as desktop/macos/bundle.py does. -->
+    <VerticalsIcon Condition="'$(VerticalsIcon)' == ''">icon\AppIcon.ico</VerticalsIcon>
+    <ApplicationIcon>$(VerticalsIcon)</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <!-- The exe, its WebView2 libraries and WebView2Loader.dll in one folder, next to nothing else. -->
@@ -25,6 +27,6 @@
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
-    <EmbeddedResource Include="icon\AppIcon.ico" LogicalName="AppIcon.ico" />
+    <EmbeddedResource Include="$(VerticalsIcon)" LogicalName="AppIcon.ico" />
   </ItemGroup>
 </Project>
