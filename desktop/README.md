@@ -47,7 +47,8 @@ launcher has its own ports, database, state directory and UI build.
   (self-contained `Verticals.app` + `.dmg`).
 - `windows/` — `Verticals.exe` for Windows (see Windows below): `MainWindow.cs` (the window, WebView2, and the tray icon
   with its menu), `Backend.cs` (starts and stops `launcher.py`), `AppLinks.cs` (the twin of `AppLinks.swift`), `Agents.cs`
-  (runs `claude` and `codex`) and `Program.cs` (one copy at a time, links, Open at Login). No updates or installer yet.
+  (runs `claude` and `codex`), `Program.cs` (one copy at a time, links, Open at Login), `bundle.py` (self-contained
+  `Verticals` folder, `Verticals-Setup.exe` and a zip) and `installer.iss` (the installer). No updates yet.
 
 The agent picker follows Enjoy's (strings, model artwork).
 
@@ -158,8 +159,9 @@ WebView2 on .NET Framework 4.8, which Windows 10 and 11 already have). It needs 
 dotnet build desktop/windows -c Release    # -> desktop/dist/windows/Verticals.exe
 ```
 
-For now it runs from the repository: it finds `desktop/launcher.py` in a folder above itself and starts it with the
-repository's `.venv`, else `VERTICALS_PYTHON`, else `py -3.12`. What it does, as on a Mac:
+Built this way it runs from the repository: it finds `desktop/launcher.py` in a folder above itself and starts it with
+the repository's `.venv`, else `VERTICALS_PYTHON`, else `py -3.12`. Installed (Build the app, below), it carries its
+own Python and PostgreSQL. What it does, as on a Mac:
 
 - One window with the board (WebView2, Microsoft Edge's engine, part of Windows 11 and of nearly every Windows 10; where it
   is missing, the window says so and links its installer, and the board and MCP start anyway). The frame and the page
@@ -209,6 +211,30 @@ whole bundle (see below).
 Installing on another Mac: open the `.dmg`, drag Verticals to Applications, then remove the
 quarantine (the app is ad-hoc signed, not notarized):
 `xattr -dr com.apple.quarantine /Applications/Verticals.app`.
+
+### Windows
+
+After step 1 above, on Windows 10 or 11 (x64) with the .NET SDK, uv with a managed Python 3.12 (`uv python install
+3.12`), PostgreSQL 16 (as the launcher finds it, or `VERTICALS_PG_BIN`) and Inno Setup 6:
+
+```powershell
+python desktop/windows/bundle.py             # -> desktop/dist/Verticals/, Verticals-Setup.exe and Verticals-windows.zip
+python desktop/windows/bundle.py --version 0.4   # the app's and the installer's version (default 0.2)
+python desktop/windows/bundle.py --dev           # a dev build: the yellow icon
+```
+
+`DOTNET` and `ISCC` name `dotnet` and Inno Setup's `ISCC.exe` when they are not on the PATH. The folder mirrors the
+repository as `Contents/Resources` does, beside `Verticals.exe`: Python 3.12 from uv (relocatable, with the Visual C++
+runtime), the dependencies in `site/`, and PostgreSQL 16 with only `postgres`, `initdb`, `pg_ctl`, the three modules the
+Mac keeps and the DLLs they import (read from their import tables, as `otool` reads them on a Mac). The build starts
+that PostgreSQL and imports the API and the MCP server with a bare PATH, so nothing outside the folder is used.
+
+`Verticals-Setup.exe` installs for the current user without admin rights into `%LOCALAPPDATA%\Programs\Verticals`, adds
+Verticals to the Start menu (a desktop shortcut if chosen) and registers `verticals://` links. Where Windows 10 lacks
+WebView2 it fetches Microsoft's installer for it. Installing over a running Verticals quits it first with `--quit`, so its
+database stops cleanly, then replaces the whole folder. Uninstalling (Settings → Apps) quits it too and removes the app,
+its links and its login item; the data in `%LOCALAPPDATA%\Verticals` stays. The installer is not signed: Windows
+SmartScreen asks once, under More info → Run anyway.
 
 ## Releases and updates
 
